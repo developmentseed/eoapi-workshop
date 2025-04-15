@@ -1,0 +1,6 @@
+name: fedgeoday25-workshop
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - rust
