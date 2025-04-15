@@ -2,5 +2,11 @@ name: fedgeoday25-workshop
 channels:
   - conda-forge
 dependencies:
-  - python
   - rust
+  - python
+  - pip
+  - pip:
+    - httpx
+    - pypgstac==0.9.6
+    - pystac
+    - pystac-client
