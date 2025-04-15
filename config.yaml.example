@@ -1,0 +1,11 @@
+project_id: "eoapi-fedgeoday25"
+stage: "dev"
+tags: {owner: hrodmn}
+
+# Database Options
+db_instance_type: 't3.micro'
+db_allocated_storage: 5
+public_db_subnet: True
+
+# VPC Options
+nat_gateway_count: 0
