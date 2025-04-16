@@ -19,4 +19,6 @@ deploy = [
 ]
 dev = [
     "jupyterlab>=4.4.0",
+    "pre-commit>=4.2.0",
+    "ruff>=0.11.5",
 ]

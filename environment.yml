@@ -2,11 +2,13 @@ name: fedgeoday25-workshop
 channels:
   - conda-forge
 dependencies:
+  - gdal=3.10
   - rust
   - python
   - pip
+  - geopandas
   - pip:
     - httpx
-    - pypgstac==0.9.6
+    - pypgstac[psycopg]==0.9.6
     - pystac
     - pystac-client

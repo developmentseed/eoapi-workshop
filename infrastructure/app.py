@@ -1,5 +1,6 @@
 from aws_cdk import (
     App,
+    CfnOutput,
     RemovalPolicy,
     Stack,
     aws_ec2,
@@ -114,6 +115,13 @@ class eoAPIStack(Stack):
             aws_ec2.Peer.any_ipv4(), aws_ec2.Port.tcp(5432)
         )
 
+        CfnOutput(
+            self,
+            "PgstacSecret",
+            value=pgstac_db.pgstac_secret.secret_arn,
+            description="ARN of the pgstac secret",
+        )
+
         #######################################################################
         # STAC API service
         PgStacApiLambda(
@@ -166,6 +174,7 @@ class eoAPIStack(Stack):
             api_env={
                 "NAME": app_config.build_service_name("vector"),
                 "description": f"{app_config.stage} tipg API",
+                "TIPG_DB_SCHEMAS": '["features"]',
             },
             # If the db is not in the public subnet then we need to put
             # the lambda within the VPC
