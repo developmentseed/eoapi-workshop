@@ -1,6 +1,6 @@
 # eoAPI FedGeoDay25 workshop
 
-[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-fedgeoday25-workshop/HEAD)
+[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-fedgeoday25-workshop/HEAD?urlpath=%2Fdoc%2Ftree%2Findex.ipynb)
 
 The eoAPI stack is deployed in AWS us-west-2:
 
