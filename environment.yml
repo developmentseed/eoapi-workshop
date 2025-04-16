@@ -6,9 +6,10 @@ dependencies:
   - rust
   - python
   - pip
+  - geoalchemy
   - geopandas
+  - httpx
+  - pystac
+  - pystac-client
   - pip:
-    - httpx
     - pypgstac[psycopg]==0.9.6
-    - pystac
-    - pystac-client
