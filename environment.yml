@@ -2,6 +2,7 @@ name: fedgeoday25-workshop
 channels:
   - conda-forge
 dependencies:
+  - jupyterlab
   - gdal=3.10
   - python=3.12
   - rust
@@ -10,7 +11,15 @@ dependencies:
   - geoalchemy2
   - geopandas
   - httpx
+  - ipywidgets
   - pystac
   - pystac-client
+  - rasterio
+  - rio-stac
+  - s3fs
+  - shapely
   - pip:
     - pypgstac[psycopg]==0.9.6
+    - stactools-sentinel2
+variables:
+  AWS_NO_SIGN_REQUEST: TRUE 

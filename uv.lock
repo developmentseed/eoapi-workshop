@@ -398,7 +398,7 @@ wheels = [
 
 [[package]]
 name = "eoapi-cdk"
-version = "8.0.2"
+version = "8.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aws-cdk-aws-apigatewayv2-alpha" },
@@ -409,9 +409,9 @@ dependencies = [
     { name = "publication" },
     { name = "typeguard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/ad/4c34e11718784d1c3a551eb4e06b9a0186236bf7977451a8383e9363a714/eoapi_cdk-8.0.2.tar.gz", hash = "sha256:f0614620dcde345f1f2c385b3a87fc100b74f8f6522803ae4dfc9c8de2bce36c", size = 802583 }
+sdist = { url = "https://files.pythonhosted.org/packages/a1/78/1835120c13fd8cac70c4fc53db40aef5dd073c22da29ebfc4b4d7cced43e/eoapi_cdk-8.0.3.tar.gz", hash = "sha256:43ea072a0bf9940d62aca729ee832129bc3529b7a058cbadd6298599c53212ea", size = 802556 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/8b/ee7077cfb931c9cd501e9e24ada48ca26daa685b43ada5966e87c4947f59/eoapi_cdk-8.0.2-py3-none-any.whl", hash = "sha256:9ac37fda54e1aba6c3335f871dabe01d30cdfd97c63fa6fc49a2539210d266a4", size = 801333 },
+    { url = "https://files.pythonhosted.org/packages/5d/16/b28303260c3623c52916d1ac9d822e7567bdac161d6b63b5f767f0bcf4cc/eoapi_cdk-8.0.3-py3-none-any.whl", hash = "sha256:173ef13e61351c1407800005fabf2c8d1dcc85c063a9ca1b0920b91d972c78eb", size = 801307 },
 ]
 
 [[package]]
@@ -465,7 +465,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 deploy = [
-    { name = "eoapi-cdk", specifier = ">=8.0.2" },
+    { name = "eoapi-cdk", specifier = ">=8.0.3" },
     { name = "pydantic", specifier = ">=2.11.3" },
     { name = "pydantic-settings", specifier = ">=2.8.1" },
 ]
