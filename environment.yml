@@ -1,4 +1,4 @@
-name: fedgeoday25-workshop
+name: eoapi-workshop
 channels:
   - conda-forge
 dependencies:
