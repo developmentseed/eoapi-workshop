@@ -7,9 +7,6 @@ dependencies:
   - python=3.12
   - rust
   - pip
-  - folium
-  - geoalchemy2
-  - geopandas
   - httpx 
   - ipywidgets
   - pystac
