@@ -10,7 +10,7 @@ dependencies:
   - folium
   - geoalchemy2
   - geopandas
-  - httpx
+  - httpx 
   - ipywidgets
   - pystac
   - pystac-client
@@ -23,3 +23,6 @@ dependencies:
     - stactools-sentinel2
 variables:
   AWS_NO_SIGN_REQUEST: TRUE 
+  STAC_API_ENDPOINT: https://pj44p72a3g.execute-api.us-west-2.amazonaws.com
+  TITILER_PGSTAC_API_ENDPOINT: https://helfmwseh8.execute-api.us-west-2.amazonaws.com
+  TIPG_API_ENDPOINT: https://ea1xibo0hd.execute-api.us-west-2.amazonaws.com

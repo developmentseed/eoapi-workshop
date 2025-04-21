@@ -151,6 +151,7 @@ class eoAPIStack(Stack):
             api_env={
                 "NAME": app_config.build_service_name("raster"),
                 "description": f"{app_config.stage} Raster API",
+                "TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS": "True",
             },
             db=pgstac_db.connection_target,
             db_secret=pgstac_db.pgstac_secret,
