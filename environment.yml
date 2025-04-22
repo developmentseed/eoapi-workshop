@@ -13,7 +13,6 @@ dependencies:
   - pystac-client
   - rasterio
   - rio-stac
-  - s3fs
   - shapely
   - pip:
     - pypgstac[psycopg]==0.9.6
