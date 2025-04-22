@@ -7,6 +7,7 @@ dependencies:
   - python=3.12
   - rust
   - pip
+  - boto3
   - httpx 
   - ipywidgets
   - pystac
