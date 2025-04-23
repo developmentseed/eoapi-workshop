@@ -1,6 +1,6 @@
 # eoAPI FedGeoDay25 workshop
 
-[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-fedgeoday25-workshop/HEAD?urlpath=%2Fdoc%2Ftree%2Findex.ipynb)
+[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-fedgeoday25-workshop/v0.1?urlpath=%2Fdoc%2Ftree%2Fdocs%2F00-introduction.ipynb)
 
 This repository contains the materials for the eoAPI workshop at FedGeoDay25 in Washington D.C. on April 23, 2025.
 The materials will all be contained in Jupyter notebooks that participants can interact with in their web browser via a 2i2c Jupyter Hub provisioned by NASA.
