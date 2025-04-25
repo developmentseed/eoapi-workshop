@@ -1,0 +1,176 @@
+services:
+  database:
+    image: ghcr.io/stac-utils/pgstac:v0.9.6
+    environment:
+      - POSTGRES_USER=username
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgis
+      - PGUSER=username
+      - PGPASSWORD=password
+      - PGDATABASE=postgis
+    ports:
+      - 5439:5432
+    command: postgres -N 500
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  features-loader:
+    image: ghcr.io/osgeo/gdal:ubuntu-small-latest
+    depends_on:
+      - database
+    environment:
+      - PGHOST=database
+      - PGUSER=username
+      - PGPASSWORD=password
+      - PGDATABASE=postgis
+      - PGPORT=5432
+    command: >
+      /bin/bash -c '
+        if [ ! -f /tmp/features_loaded ]; then
+          apt-get update && apt-get install -y postgresql-client &&
+          sleep 5 &&  # Give the database time to start
+          psql -c "CREATE SCHEMA IF NOT EXISTS features;" &&
+          psql -c "DROP TABLE IF EXISTS features.ecoregions;" &&
+          ogr2ogr -f PostgreSQL \
+            PG:dbname=$${PGDATABASE} \
+            /vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp \
+            -nln features.ecoregions \
+            -t_srs EPSG:4326 \
+            -lco GEOMETRY_NAME=geom \
+            -lco FID=id \
+            -lco PRECISION=NO \
+            -nlt PROMOTE_TO_MULTI &&
+          touch /tmp/features_loaded
+        else
+          echo "Features already loaded. Skipping."
+        fi
+        echo "Features loading process completed successfully" > /tmp/health_status
+        # Keep the container running but doing nothing
+        tail -f /dev/null
+      '
+    volumes:
+      - feature-loader-state:/tmp
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /tmp/features_loaded ] && [ -f /tmp/health_status ] && echo 'Features loaded successfully' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+
+  stac-fastapi:
+    image: ghcr.io/stac-utils/stac-fastapi-pgstac:5.0.2
+    ports:
+      - 8081:8081
+    environment:
+      # Postgres connection
+      - POSTGRES_USER=username
+      - POSTGRES_PASS=password
+      - POSTGRES_DBNAME=postgis
+      - POSTGRES_HOST_READER=database
+      - POSTGRES_HOST_WRITER=database
+      - POSTGRES_PORT=5432
+      - DB_MIN_CONN_SIZE=1
+      - DB_MAX_CONN_SIZE=1
+    depends_on:
+      - database
+    command:
+      bash -c "uvicorn stac_fastapi.pgstac.app:app --host 0.0.0.0 --port 8081"
+    volumes:
+      - ./dockerfiles/scripts:/tmp/scripts
+
+  titiler-pgstac:
+    platform: linux/amd64
+    image: ghcr.io/stac-utils/titiler-pgstac:1.7.2
+    ports:
+      - 8082:8082
+    environment:
+      # Postgres connection
+      - POSTGRES_USER=username
+      - POSTGRES_PASS=password
+      - POSTGRES_DBNAME=postgis
+      - POSTGRES_HOST=database
+      - POSTGRES_PORT=5432
+      - DB_MIN_CONN_SIZE=1
+      - DB_MAX_CONN_SIZE=10
+      # - DB_MAX_QUERIES=10
+      # - DB_MAX_IDLE=10
+      # GDAL Config
+      - CPL_TMPDIR=/tmp
+      - GDAL_CACHEMAX=75%
+      - GDAL_INGESTED_BYTES_AT_OPEN=32768
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - GDAL_HTTP_MERGE_CONSECUTIVE_RANGES=YES
+      - GDAL_HTTP_MULTIPLEX=YES
+      - GDAL_HTTP_VERSION=2
+      - VSI_CACHE=TRUE
+      - VSI_CACHE_SIZE=536870912
+      # TiTiler Config
+      - MOSAIC_CONCURRENCY=1
+      - TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS=True
+      # AWS S3 endpoint config
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    depends_on:
+      - database
+    command:
+      bash -c "uvicorn titiler.pgstac.main:app  --host 0.0.0.0 --port 8082"
+
+  tipg:
+    image: ghcr.io/developmentseed/tipg:1.0.1
+    ports:
+      - 8083:8083
+    environment:
+      # Postgres connection
+      - POSTGRES_USER=username
+      - POSTGRES_PASS=password
+      - POSTGRES_DBNAME=postgis
+      - POSTGRES_HOST=database
+      - POSTGRES_PORT=5432
+      - DB_MIN_CONN_SIZE=1
+      - DB_MAX_CONN_SIZE=10
+      - TIPG_DB_SCHEMAS=["features"]
+    command:
+      bash -c "uvicorn tipg.main:app --host 0.0.0.0 --port 8083"
+    depends_on:
+      database:
+        condition: service_started
+      features-loader:
+        condition: service_healthy
+
+  stac-browser:
+    image: ghcr.io/radiantearth/stac-browser:latest
+    ports:
+      - 8080:8080
+    environment:
+      SB_catalogUrl: "http://0.0.0.0:8081"
+    depends_on:
+      - stac-fastapi
+      - database
+
+  jupyterhub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8888:8888
+    volumes:
+      - ./docs:/home/jovyan/docs
+    environment:
+      - PGHOST=database
+      - PGUSER=username
+      - PGPASSWORD=password
+      - PGDATABASE=postgis
+      - PGPORT=5432
+      - STAC_API_ENDPOINT=http://stac-fastapi:8081
+      - TITILER_PGSTAC_API_ENDPOINT=http://titiler-pgstac:8082
+      - TIPG_API_ENDPOINT=http://tipg:8083
+      - STAC_BROWSER_ENDPOINT=http://localhost:8080
+
+volumes:
+  pgdata:
+  feature-loader-state:
+
+networks:
+  default:
+    name: eoapi-network
