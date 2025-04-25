@@ -49,7 +49,7 @@ uv run npx cdk deploy --all --require-approval never
 
 ## Set up for workshop
 
-### Load the Terrestrial Ecoregions of the World features into a postgis table
+### Load the Level III Ecoregions of North America features into a postgis table
 
 ```bash
 PGSTAC_STACK=eoapi-fedgeoday25
@@ -66,13 +66,11 @@ export PGUSER=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.username')
 export PGPASSWORD=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.password')
 
 psql -c "CREATE SCHEMA features;"
-psql -c "DROP TABLE features.terrestrial_ecoregions;"
-# download from WWF site not working with wget so download from browser...
-# wget https://files.worldwildlife.org/wwfcmsprod/files/Publication/file/6kcchn7e3u_official_teow.zip -O /tmp/6kcchn7e3u_official_teow.zip
+psql -c "DROP TABLE features.ecoregions;"
 ogr2ogr -f "PostgreSQL" \
   PG:"postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" \
-  /vsizip//tmp/6kcchn7e3u_official_teow.zip/official/wwf_terr_ecos.shp \
-  -nln features.terrestrial_ecoregions \
+  /vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp \
+  -nln features.ecoregions \
   -lco GEOMETRY_NAME=geom \
   -lco FID=id \
   -lco PRECISION=NO \
