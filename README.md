@@ -1,6 +1,6 @@
 # eoAPI MN GIS/LIS Annual Meeting 2025
 
-[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-workshop/mngislis?urlpath=%2Fdoc%2Ftree%2Fdocs%2F00-introduction.ipynb)
+[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-workshop/mngislis2025?urlpath=%2Fdoc%2Ftree%2Fdocs%2F00-introduction.ipynb)
 
 This repository contains the materials for the eoAPI workshop at the MN GIS/LIS Consortium Annual Conference in Duluth, MN on October 1, 2025.
 
