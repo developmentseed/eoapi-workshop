@@ -1,6 +1,6 @@
 #!/bin/bash
 export AWS_NO_SIGN_REQUEST=TRUE 
-export STAC_API_ENDPOINT=https://pj44p72a3g.execute-api.us-west-2.amazonaws.com
-export TITILER_PGSTAC_API_ENDPOINT=https://helfmwseh8.execute-api.us-west-2.amazonaws.com
-export TIPG_API_ENDPOINT=https://ea1xibo0hd.execute-api.us-west-2.amazonaws.com
+export STAC_API_ENDPOINT=https://sfa4ewlibf.execute-api.us-west-2.amazonaws.com
+export TITILER_PGSTAC_API_ENDPOINT=https://gboslqvxy3.execute-api.us-west-2.amazonaws.com
+export TIPG_API_ENDPOINT=https://2pd90x0reb.execute-api.us-west-2.amazonaws.com
 exec "$@"

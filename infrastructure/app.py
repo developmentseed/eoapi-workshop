@@ -15,7 +15,7 @@ from eoapi_cdk import (
     TitilerPgstacApiLambda,
 )
 
-PGSTAC_VERSION = "0.9.6"
+PGSTAC_VERSION = "0.9.8"
 
 
 class VpcStack(Stack):
@@ -124,7 +124,7 @@ class eoAPIStack(Stack):
 
         #######################################################################
         # STAC API service
-        PgStacApiLambda(
+        stac_api = PgStacApiLambda(
             self,
             "stac-api",
             api_env={
@@ -141,11 +141,12 @@ class eoAPIStack(Stack):
             )
             if not app_config.public_db_subnet
             else None,
+            enable_snap_start=True,
         )
 
         #######################################################################
         # Raster service
-        TitilerPgstacApiLambda(
+        titiler_pgstac_api = TitilerPgstacApiLambda(
             self,
             "raster-api",
             api_env={
@@ -163,11 +164,12 @@ class eoAPIStack(Stack):
             )
             if not app_config.public_db_subnet
             else None,
+            enable_snap_start=True,
         )
 
         #######################################################################
         # Vector Service
-        TiPgApiLambda(
+        tipg_api = TiPgApiLambda(
             self,
             "vector-api",
             db=pgstac_db.connection_target,
@@ -185,7 +187,11 @@ class eoAPIStack(Stack):
             )
             if not app_config.public_db_subnet
             else None,
+            enable_snap_start=True,
         )
+
+        for api in [stac_api, titiler_pgstac_api, tipg_api]:
+            api.node.add_dependency(pgstac_db.secret_bootstrapper)
 
 
 app = App()

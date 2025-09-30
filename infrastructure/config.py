@@ -22,7 +22,7 @@ class AppConfig(BaseSettings):
         default=None,
     )
     db_instance_type: str = Field(
-        description="Database instance type", default="t3.micro"
+        description="Database instance type", default="t3.small"
     )
     db_allocated_storage: int = Field(
         description="Allocated storage for the database", default=5

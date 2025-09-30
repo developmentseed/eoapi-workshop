@@ -51,8 +51,10 @@ uv run npx cdk deploy --all --require-approval never
 
 ### Load the Level III Ecoregions of North America features into a postgis table
 
+Start by querying the AWS CloudFormation Stack to get the pgstac database credentials
+
 ```bash
-PGSTAC_STACK=eoapi-fedgeoday25
+PGSTAC_STACK=mngislis
 PGSTAC_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name $PGSTAC_STACK --query "Stacks[0].Outputs[?OutputKey=='PgstacSecret'].OutputValue" --output text)
 PGSTAC_SECRET_VALUE=$(aws secretsmanager get-secret-value \
   --secret-id "$PGSTAC_SECRET_ARN" \
@@ -64,15 +66,29 @@ export PGPORT=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.port')
 export PGDATABASE=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.dbname')
 export PGUSER=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.username')
 export PGPASSWORD=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.password')
+```
 
+Then use psql to create a new schema (`features`) and make sure there is a spot for the new table:
+
+```bash
 psql -c "CREATE SCHEMA features;"
-psql -c "DROP TABLE features.ecoregions;"
-ogr2ogr -f "PostgreSQL" \
+psql -c "DROP TABLE IF EXISTS features.ecoregions;"
+
+```
+
+Use the `ogr2ogr` (via GDAL docker image) to write the ecoregion features from a zipped shapefile on the web directly to our PostGIS database table:
+
+```bash
+docker pull ghcr.io/osgeo/gdal:alpine-small-latest
+ gdalinfo $PWD/my.tif
+
+docker run --rm ghcr.io/osgeo/gdal:alpine-small-latest ogr2ogr -f "PostgreSQL" \
   PG:"postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" \
   /vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp \
   -nln features.ecoregions \
   -lco GEOMETRY_NAME=geom \
   -lco FID=id \
   -lco PRECISION=NO \
-  -nlt PROMOTE_TO_MULTI
+  -nlt PROMOTE_TO_MULTI \
+  -t_srs EPSG:3857
 ```
