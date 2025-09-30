@@ -16,5 +16,5 @@ dependencies:
   - rio-stac
   - shapely
   - pip:
-    - pypgstac[psycopg]==0.9.6
+    - pypgstac[psycopg]==0.9.8
     - stactools-sentinel2
