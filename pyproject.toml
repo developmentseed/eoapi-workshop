@@ -5,6 +5,7 @@ description = "materials for the eoAPI workshop at FedGeoDay 2025"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "boto3>=1.40.41",
     "httpx>=0.28.1",
     "ipywidgets>=8.1.7",
     "pypgstac[psycopg]==0.9.8",
@@ -13,6 +14,7 @@ dependencies = [
     "rasterio>=1.4.3",
     "rio-stac>=0.12.0",
     "shapely>=2.1.2",
+    "stactools-sentinel2>=0.8.0",
 ]
 
 [dependency-groups]
