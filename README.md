@@ -4,7 +4,7 @@
 
 This repository contains the materials for the eoAPI workshop at the MN GIS/LIS Consortium Annual Conference in Duluth, MN on October 1, 2025.
 
-The materials are all contained in Jupyter notebooks that participants can interact with in their web browser via a [2i2c](https://2i2c.org/) Jupyter Hub provisioned by NASA.
+The materials are all contained in Jupyter notebooks that participants can interact with in their web browser via a Jupyter Hub that is operated and provisioned by [2i2c](https://2i2c.org) and funded by NASA.
 
 For the in-person workshop we have deployed eoAPI using [eoapi-cdk]() constructs in AWS us-west-2. The urls for the eoAPI APIs are listed below:
 
