@@ -2,10 +2,10 @@
 version: 1
 project:
   id: 3d9786d8-d36d-42dd-9347-bb284fc3f7fe
-  # title:
+  title: eoAPI Workshop
   # description:
-  # keywords: []
-  # authors: []
+  keywords: [eoapi, stac, pgstac]
+  authors: [Henry Rodman, Alex Mandel]
   github: https://github.com/developmentseed/eoapi-workshop
   # To autogenerate a Table of Contents, run "myst init --write-toc"
   toc:
