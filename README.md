@@ -1,6 +1,6 @@
-# eoAPI FedGeoDay25 workshop
+# eoAPI workshop code
 
-This repository contains the materials for the eoAPI workshop at FedGeoDay25 in Washington D.C. on April 23, 2025.
+This repository contains the materials for the eoAPI workshop.
 
 For the in-person workshop we deployed eoAPI using [eoapi-cdk](https://github.com/developmentseed/eoapi-cdk) constructs in AWS us-west-2.
 Participants in the in-person workshop were provided with credentials for the `pgstac` database so they could interact with it during the tutorials.
@@ -63,8 +63,8 @@ Once authenticated, Docker will be able to pull the required container images fr
 ### Clone this repository and start the docker network
 
 ```bash
-git clone https://github.com/developmentseed/eoapi-fedgeoday25-workshop.git
-cd eoapi-fedgeoday25-workshop
+git clone https://github.com/developmentseed/eoapi-workshop.git
+cd eoapi-workshop
 docker compose up
 ```
 
