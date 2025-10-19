@@ -1,7 +1,35 @@
 #!/bin/bash
-export AWS_NO_SIGN_REQUEST=TRUE 
-export STAC_API_ENDPOINT=https://sfa4ewlibf.execute-api.us-west-2.amazonaws.com
-export TITILER_PGSTAC_API_ENDPOINT=https://gboslqvxy3.execute-api.us-west-2.amazonaws.com
-export TIPG_API_ENDPOINT=https://2pd90x0reb.execute-api.us-west-2.amazonaws.com
-export GIST_URL=https://gist.githubusercontent.com/hrodmn/02ed728bbcf455a2861db0e6e1fbbfe8/raw/0331483d0f7ecbea75b1aab75ecb04a9ef76ba9c/mngislis.json
+
+# Workshop configuration endpoint
+WORKSHOP_CONFIG_URL="YOUR_LAMBDA_URL_HERE"
+WORKSHOP_TOKEN="YOUR_WORKSHOP_TOKEN_HERE"
+
+# Fetch workshop configuration from Lambda
+echo "Fetching workshop configuration..."
+WORKSHOP_CONFIG=$(curl -s -H "Authorization: Bearer ${WORKSHOP_TOKEN}" "${WORKSHOP_CONFIG_URL}")
+
+# Check if the request was successful
+if [ $? -eq 0 ] && [ -n "$WORKSHOP_CONFIG" ]; then
+    # Parse JSON response and export environment variables
+    export PGHOST=$(echo "$WORKSHOP_CONFIG" | jq -r '.pghost')
+    export PGPORT=$(echo "$WORKSHOP_CONFIG" | jq -r '.pgport')
+    export PGDATABASE=$(echo "$WORKSHOP_CONFIG" | jq -r '.pgdatabase')
+    export PGUSER=$(echo "$WORKSHOP_CONFIG" | jq -r '.pguser')
+    export PGPASSWORD=$(echo "$WORKSHOP_CONFIG" | jq -r '.pgpassword')
+    export STAC_API_ENDPOINT=$(echo "$WORKSHOP_CONFIG" | jq -r '.stac_api_endpoint')
+    export TITILER_PGSTAC_API_ENDPOINT=$(echo "$WORKSHOP_CONFIG" | jq -r '.titiler_pgstac_api_endpoint')
+    export TIPG_API_ENDPOINT=$(echo "$WORKSHOP_CONFIG" | jq -r '.tipg_api_endpoint')
+
+    echo "Workshop environment configured successfully!"
+else
+    echo "Warning: Failed to fetch workshop configuration. Using fallback values..."
+    # Fallback to previous configuration if Lambda fails
+    export STAC_API_ENDPOINT=https://sfa4ewlibf.execute-api.us-west-2.amazonaws.com
+    export TITILER_PGSTAC_API_ENDPOINT=https://gboslqvxy3.execute-api.us-west-2.amazonaws.com
+    export TIPG_API_ENDPOINT=https://2pd90x0reb.execute-api.us-west-2.amazonaws.com
+fi
+
+# AWS configuration for public data access
+export AWS_NO_SIGN_REQUEST=TRUE
+
 exec "$@"

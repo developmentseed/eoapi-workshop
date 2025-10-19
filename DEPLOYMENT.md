@@ -1,7 +1,5 @@
 # eoAPI deployment
 
-Template repository to deploy [eoapi](https://eoapi.dev) on AWS using the [eoapi-cdk constructs](https://github.com/developmentseed/eoapi-cdk) or locally with Docker.
-
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/)
@@ -49,12 +47,77 @@ uv run npx cdk deploy --all --require-approval never
 
 ## Set up for workshop
 
-### Load the Level III Ecoregions of North America features into a postgis table
+After deployment completes, you'll need to configure the workshop environment and share access credentials securely with participants.
+
+### 1. Get Workshop Configuration Credentials
+
+The CDK deployment creates a secure Lambda endpoint that provides database credentials and API endpoints to workshop participants. After deployment, retrieve the configuration values:
+
+```bash
+STACK_NAME=eoapiworkshop  # Your stack name from config.yaml
+
+# Get the workshop config Lambda URL
+WORKSHOP_CONFIG_URL=$(aws cloudformation describe-stacks \
+  --stack-name $STACK_NAME \
+  --query "Stacks[0].Outputs[?OutputKey=='WorkshopConfigUrl'].OutputValue" \
+  --output text)
+
+# Get the workshop token
+WORKSHOP_TOKEN=$(aws cloudformation describe-stacks \
+  --stack-name $STACK_NAME \
+  --query "Stacks[0].Outputs[?OutputKey=='WorkshopToken'].OutputValue" \
+  --output text)
+
+echo "Workshop Config URL: $WORKSHOP_CONFIG_URL"
+echo "Workshop Token: $WORKSHOP_TOKEN"
+```
+
+### 2. Update the `start` Script
+
+Update the `start` file in the repository root with your Lambda URL and token:
+
+```bash
+# Edit the start script and replace:
+WORKSHOP_CONFIG_URL="YOUR_LAMBDA_URL_HERE"  # Replace with $WORKSHOP_CONFIG_URL
+WORKSHOP_TOKEN="YOUR_WORKSHOP_TOKEN_HERE"   # Replace with $WORKSHOP_TOKEN
+```
+
+Commit and push this change to your workshop repository. The 2i2c JupyterHub will use this script to automatically configure each user's environment with the necessary credentials and API endpoints.
+
+**Security note:** The token in the `start` script acts as a workshop-wide password. Anyone with access to this repository can use it to get database credentials. After the workshop:
+
+- Rotate the token by updating `workshop_token` in `config.yaml` and redeploying
+- Or revoke access by deleting the workshop config Lambda function
+
+### 3. Test the Configuration Endpoint
+
+You can test that the endpoint works correctly:
+
+```bash
+curl -H "Authorization: Bearer $WORKSHOP_TOKEN" $WORKSHOP_CONFIG_URL | jq .
+```
+
+This should return JSON with all the configuration values:
+
+```json
+{
+  "pghost": "...",
+  "pgport": "5432",
+  "pgdatabase": "postgis",
+  "pguser": "...",
+  "pgpassword": "...",
+  "stac_api_endpoint": "https://...",
+  "titiler_pgstac_api_endpoint": "https://...",
+  "tipg_api_endpoint": "https://..."
+}
+```
+
+### 4. Load the Level III Ecoregions of North America features into a postgis table
 
 Start by querying the AWS CloudFormation Stack to get the pgstac database credentials
 
 ```bash
-PGSTAC_STACK=mngislis
+PGSTAC_STACK=eoapiworkshop
 PGSTAC_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name $PGSTAC_STACK --query "Stacks[0].Outputs[?OutputKey=='PgstacSecret'].OutputValue" --output text)
 PGSTAC_SECRET_VALUE=$(aws secretsmanager get-secret-value \
   --secret-id "$PGSTAC_SECRET_ARN" \
@@ -90,5 +153,5 @@ docker run --rm ghcr.io/osgeo/gdal:alpine-small-latest ogr2ogr -f "PostgreSQL" \
   -lco FID=id \
   -lco PRECISION=NO \
   -nlt PROMOTE_TO_MULTI \
-  -t_srs EPSG:3857
+  -t_srs EPSG:4326
 ```

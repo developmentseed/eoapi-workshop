@@ -16,5 +16,6 @@ dependencies:
   - rio-stac
   - shapely
   - pip:
+    - haikunator
     - pypgstac[psycopg]==0.9.8
     - stactools-sentinel2

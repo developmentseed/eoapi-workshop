@@ -1,9 +1,15 @@
+import os
+from pathlib import Path
+
 from aws_cdk import (
     App,
     CfnOutput,
+    Duration,
+    Environment,
     RemovalPolicy,
     Stack,
     aws_ec2,
+    aws_lambda,
     aws_rds,
 )
 from config import AppConfig
@@ -15,67 +21,11 @@ from eoapi_cdk import (
     TitilerPgstacApiLambda,
 )
 
-PGSTAC_VERSION = "0.9.8"
-
-
-class VpcStack(Stack):
-    def __init__(
-        self, scope: Construct, app_config: AppConfig, id: str, **kwargs
-    ) -> None:
-        super().__init__(scope, id=id, tags=app_config.tags, **kwargs)
-
-        self.vpc = aws_ec2.Vpc(
-            self,
-            "vpc",
-            subnet_configuration=[
-                aws_ec2.SubnetConfiguration(
-                    name="ingress", subnet_type=aws_ec2.SubnetType.PUBLIC, cidr_mask=24
-                ),
-                aws_ec2.SubnetConfiguration(
-                    name="application",
-                    subnet_type=aws_ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                    cidr_mask=24,
-                ),
-                aws_ec2.SubnetConfiguration(
-                    name="rds",
-                    subnet_type=aws_ec2.SubnetType.PRIVATE_ISOLATED,
-                    cidr_mask=24,
-                ),
-            ],
-            nat_gateways=app_config.nat_gateway_count,
-        )
-
-        self.vpc.add_interface_endpoint(
-            "SecretsManagerEndpoint",
-            service=aws_ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-        )
-
-        self.vpc.add_interface_endpoint(
-            "CloudWatchEndpoint",
-            service=aws_ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
-        )
-
-        self.vpc.add_gateway_endpoint(
-            "S3", service=aws_ec2.GatewayVpcEndpointAwsService.S3
-        )
-
-        self.export_value(
-            self.vpc.select_subnets(subnet_type=aws_ec2.SubnetType.PUBLIC)
-            .subnets[0]
-            .subnet_id
-        )
-        self.export_value(
-            self.vpc.select_subnets(subnet_type=aws_ec2.SubnetType.PUBLIC)
-            .subnets[1]
-            .subnet_id
-        )
-
 
 class eoAPIStack(Stack):
     def __init__(
         self,
         scope: Construct,
-        vpc: aws_ec2.Vpc,
         id: str,
         app_config: AppConfig,
         **kwargs,
@@ -87,6 +37,12 @@ class eoAPIStack(Stack):
             **kwargs,
         )
 
+        vpc = aws_ec2.Vpc.from_lookup(
+            self,
+            f"{id}-vpc",
+            vpc_id=app_config.vpc_id,
+        )
+
         #######################################################################
         # PG database
         pgstac_db = PgStacDatabase(
@@ -95,7 +51,7 @@ class eoAPIStack(Stack):
             add_pgbouncer=True,
             vpc=vpc,
             engine=aws_rds.DatabaseInstanceEngine.postgres(
-                version=aws_rds.PostgresEngineVersion.VER_16
+                version=aws_rds.PostgresEngineVersion.VER_17
             ),
             vpc_subnets=aws_ec2.SubnetSelection(
                 subnet_type=(
@@ -107,7 +63,7 @@ class eoAPIStack(Stack):
             allocated_storage=app_config.db_allocated_storage,
             instance_type=aws_ec2.InstanceType(app_config.db_instance_type),
             removal_policy=RemovalPolicy.DESTROY,
-            pgstac_version=PGSTAC_VERSION,
+            pgstac_version=app_config.pgstac_version,
         )
 
         assert pgstac_db.security_group
@@ -165,6 +121,7 @@ class eoAPIStack(Stack):
             if not app_config.public_db_subnet
             else None,
             enable_snap_start=True,
+            buckets=["*"],
         )
 
         #######################################################################
@@ -193,19 +150,69 @@ class eoAPIStack(Stack):
         for api in [stac_api, titiler_pgstac_api, tipg_api]:
             api.node.add_dependency(pgstac_db.secret_bootstrapper)
 
+        #######################################################################
+        # Workshop Config Lambda - provides credentials and endpoints to workshop users
+        workshop_config_lambda = aws_lambda.Function(
+            self,
+            "workshop-config",
+            runtime=aws_lambda.Runtime.PYTHON_3_12,
+            handler="workshop_config.handler",
+            code=aws_lambda.Code.from_asset(
+                str(Path(__file__).parent / "lambda"),
+            ),
+            timeout=Duration.seconds(30),
+            environment={
+                "PGSTAC_SECRET_ARN": pgstac_db.pgstac_secret.secret_arn,
+                "WORKSHOP_TOKEN": app_config.workshop_token,
+                "STAC_API_ENDPOINT": stac_api.url,
+                "TITILER_PGSTAC_API_ENDPOINT": titiler_pgstac_api.url,
+                "TIPG_API_ENDPOINT": tipg_api.url,
+            },
+        )
+
+        # Grant Lambda permission to read the secret
+        pgstac_db.pgstac_secret.grant_read(workshop_config_lambda)
+
+        # Create Function URL (public HTTPS endpoint)
+        workshop_config_url = workshop_config_lambda.add_function_url(
+            auth_type=aws_lambda.FunctionUrlAuthType.NONE,
+            cors=aws_lambda.FunctionUrlCorsOptions(
+                allowed_origins=["*"],
+                allowed_methods=[aws_lambda.HttpMethod.GET],
+                allowed_headers=["Authorization", "Content-Type"],
+            ),
+        )
+
+        CfnOutput(
+            self,
+            "WorkshopConfigUrl",
+            value=workshop_config_url.url,
+            description="URL for workshop configuration endpoint",
+        )
+
+        CfnOutput(
+            self,
+            "WorkshopToken",
+            value=app_config.workshop_token,
+            description="Bearer token for workshop config endpoint",
+        )
+
 
 app = App()
 
 app_config = AppConfig()
 
-vpc_stack = VpcStack(
-    scope=app,
-    app_config=app_config,
-    id=f"vpc{app_config.project_id}",
+# Get AWS account and region from environment (uses AWS_PROFILE)
+env = Environment(
+    account=os.environ.get("CDK_DEFAULT_ACCOUNT"),
+    region=os.environ.get("CDK_DEFAULT_REGION"),
 )
 
 eoapi_stack = eoAPIStack(
-    scope=app, vpc=vpc_stack.vpc, app_config=app_config, id=app_config.project_id
+    scope=app,
+    app_config=app_config,
+    id=app_config.project_id,
+    env=env,
 )
 
 app.synth()

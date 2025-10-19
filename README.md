@@ -1,20 +1,18 @@
-# eoAPI MN GIS/LIS Annual Meeting 2025
+# eoAPI Workshop
 
 [![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-workshop/mngislis2025?urlpath=%2Fdoc%2Ftree%2Fdocs%2F00-introduction.ipynb)
 
-This repository contains the materials for the eoAPI workshop at the MN GIS/LIS Consortium Annual Conference in Duluth, MN on October 1, 2025.
+This repository contains the materials for the eoAPI workshop.
 
 The materials are all contained in Jupyter notebooks that participants can interact with in their web browser via a Jupyter Hub that is operated and provisioned by [2i2c](https://2i2c.org) and funded by NASA.
 
-For the in-person workshop we have deployed eoAPI using [eoapi-cdk]() constructs in AWS us-west-2. The urls for the eoAPI APIs are listed below:
+For the workshop we have deployed a set of eoAPI services using [eoapi-cdk]() constructs in AWS us-west-2. The urls for the eoAPI APIs are listed below:
 
 - titiler-pgstac: <https://gboslqvxy3.execute-api.us-west-2.amazonaws.com>
 - stac-fastapi-pgstac: <https://sfa4ewlibf.execute-api.us-west-2.amazonaws.com>
 - tipg: <https://2pd90x0reb.execute-api.us-west-2.amazonaws.com>
 
-Participants in the in-person workshop will be provided with credentials for the `pgstac` database so they can interact with it during the tutorials.
-
-After the event we will update the materials so anyone can run the tutorial notebooks on their own computer using a docker network with all of the eoAPI services.
+Participants in the workshop will be provided with credentials for the `pgstac` database so they can interact with it during the tutorials.
 
 ## Running the tutorial
 
@@ -72,8 +70,8 @@ Once authenticated, Docker will be able to pull the required container images fr
 ### Clone this repository and start the docker network
 
 ```bash
-git clone https://github.com/developmentseed/eoapi-fedgeoday25-workshop.git
-cd eoapi-fedgeoday25-workshop
+git clone https://github.com/developmentseed/eoapi-workshop.git
+cd eoapi-workshop
 docker compose up
 ```
 

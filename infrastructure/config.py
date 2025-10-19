@@ -1,18 +1,19 @@
+import secrets
 from typing import Dict, Optional, Tuple, Type
 
-from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
-from typing_extensions import Self
 
 
 class AppConfig(BaseSettings):
-    project_id: str = Field(description="Project ID", default="eoapi-template-demo")
-    stage: str = Field(description="Stage of deployment", default="test")
+    project_id: str = Field(description="Project ID", default="eoapi-workshop")
+    stage: str = Field(description="Stage of deployment", default="dev")
+
     # because of its validator, `tags` should always come after `project_id` and `stage`
     tags: Optional[Dict[str, str]] = Field(
         description="""Tags to apply to resources. If none provided,
@@ -21,8 +22,13 @@ class AppConfig(BaseSettings):
         they will override any tags defined here.""",
         default=None,
     )
+
+    vpc_id: str = Field(description="VPC ID")
+
+    pgstac_version: str = Field(description="pgstac version", default="0.9.8")
+
     db_instance_type: str = Field(
-        description="Database instance type", default="t3.small"
+        description="Database instance type", default="t4g.small"
     )
     db_allocated_storage: int = Field(
         description="Allocated storage for the database", default=5
@@ -30,9 +36,10 @@ class AppConfig(BaseSettings):
     public_db_subnet: bool = Field(
         description="Whether to put the database in a public subnet", default=True
     )
-    nat_gateway_count: int = Field(
-        description="Number of NAT gateways to create",
-        default=0,
+
+    workshop_token: str = Field(
+        description="Bearer token for workshop config Lambda. Auto-generated if not provided.",
+        default="",
     )
 
     model_config = SettingsConfigDict(
@@ -43,19 +50,10 @@ class AppConfig(BaseSettings):
     def default_tags(cls, v, info: ValidationInfo):
         return v or {"project_id": info.data["project_id"], "stage": info.data["stage"]}
 
-    @model_validator(mode="after")
-    def validate_model(self) -> Self:
-        if not self.public_db_subnet and (
-            self.nat_gateway_count is not None and self.nat_gateway_count <= 0
-        ):
-            raise ValueError(
-                """if the database and its associated services instances
-                             are to be located in the private subnet of the VPC, NAT
-                             gateways are needed to allow egress from the services
-                             and therefore `nat_gateway_count` has to be > 0."""
-            )
-
-        return self
+    @field_validator("workshop_token")
+    def generate_token(cls, v):
+        """Generate a random workshop token if not provided."""
+        return v or secrets.token_urlsafe(32)
 
     def build_service_name(self, service_id: str) -> str:
         return f"{self.project_id}-{self.stage}-{service_id}"
