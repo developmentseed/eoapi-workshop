@@ -158,7 +158,7 @@ services:
   jupyterhub:
     build:
       context: .
-      dockerfile: Dockerfile.jupyterhub
+      dockerfile: Dockerfile.local
     ports:
       - 8888:8888
     volumes:

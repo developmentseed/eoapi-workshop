@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Workshop configuration endpoint
-WORKSHOP_CONFIG_URL="YOUR_LAMBDA_URL_HERE"
-WORKSHOP_TOKEN="YOUR_WORKSHOP_TOKEN_HERE"
+WORKSHOP_CONFIG_URL="https://r2b574s42fumgypsqvsvhvsyfu0mggmf.lambda-url.us-west-2.on.aws/"
+WORKSHOP_TOKEN="eoapi-workshop-2025"
 
 # Fetch workshop configuration from Lambda
 echo "Fetching workshop configuration..."
