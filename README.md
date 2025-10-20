@@ -4,21 +4,31 @@
 
 This repository contains the materials for the eoAPI workshop.
 
-The materials are all contained in Jupyter notebooks that participants can interact with in their web browser via a Jupyter Hub that is operated and provisioned by [2i2c](https://2i2c.org) and funded by NASA.
+The materials are all contained in Jupyter notebooks that participants can interact with in their web browser.
 
-For the workshop we have deployed a set of eoAPI services using [eoapi-cdk]() constructs in AWS us-west-2. The urls for the eoAPI APIs are listed below:
+## Workshop Participation
 
-- titiler-pgstac: <https://gboslqvxy3.execute-api.us-west-2.amazonaws.com>
-- stac-fastapi-pgstac: <https://sfa4ewlibf.execute-api.us-west-2.amazonaws.com>
-- tipg: <https://2pd90x0reb.execute-api.us-west-2.amazonaws.com>
+If you're participating in an eoAPI workshop, you'll access the notebooks through a Jupyter Hub operated by [2i2c](https://2i2c.org).
 
-Participants in the workshop will be provided with credentials for the `pgstac` database so they can interact with it during the tutorials.
+### Getting Started as a Participant
 
-## Running the tutorial
+1. **Access the Jupyter Hub** - Your instructor will provide a link to the workshop's Jupyter Hub
+2. **Open a notebook** - Navigate to the `docs/` folder and open any notebook
+3. **Enter the workshop token** - When you run the first cell (`workshop_setup.setup()`), you'll be prompted to enter the workshop token provided by your instructor
+4. **Start learning!** - All configuration (database credentials, API endpoints) will be automatically set up
 
-This project uses a docker compose file to spin up a full eoAPI stack and a Jupyter Hub server that you can use to interact with the eoAPI services via Jupyter notebooks.
+The workshop uses a deployed eoAPI stack with the following services:
+- **STAC API** (`stac-fastapi-pgstac`) - For searching STAC metadata
+- **Raster API** (`titiler-pgstac`) - For visualizing raster data dynamically
+- **Vector API** (`tipg`) - For serving vector features and tiles
 
-## Install docker and docker compose
+All services are accessible via custom domains following the pattern: `{service}.{PROJECT_ID}.eoapi.dev`
+
+## Local Development
+
+If you want to run the workshop materials locally on your own machine, you can use Docker Compose to spin up a full eoAPI stack and Jupyter Hub server.
+
+### Install docker and docker compose
 
 - **Windows/Mac**: Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - **Linux**: Follow the [official installation instructions](https://docs.docker.com/engine/install/) for your distribution

@@ -12,6 +12,15 @@ from aws_cdk import (
     aws_lambda,
     aws_rds,
 )
+from aws_cdk import (
+    aws_certificatemanager as acm,
+)
+from aws_cdk import (
+    aws_route53 as route53,
+)
+from aws_cdk.aws_apigatewayv2 import ApiMapping, DomainName, HttpApi
+from aws_cdk.aws_apigatewayv2_integrations import HttpLambdaIntegration
+from aws_cdk.aws_route53_targets import ApiGatewayv2DomainProperties
 from config import AppConfig
 from constructs import Construct
 from eoapi_cdk import (
@@ -41,6 +50,52 @@ class eoAPIStack(Stack):
             self,
             f"{id}-vpc",
             vpc_id=app_config.vpc_id,
+        )
+
+        #######################################################################
+        # Route53 Hosted Zone and Certificate
+        hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
+            self,
+            "HostedZone",
+            hosted_zone_id=app_config.hosted_zone_id,
+            zone_name=app_config.domain_name,
+        )
+
+        # Use existing wildcard certificate
+        certificate = acm.Certificate.from_certificate_arn(
+            self,
+            "Certificate",
+            certificate_arn=app_config.certificate_arn,
+        )
+
+        #######################################################################
+        # Custom Domain Names for APIs
+        stac_domain = DomainName(
+            self,
+            "stac-api-domain-name",
+            domain_name=f"{app_config.project_id}-stac.{app_config.domain_name}",
+            certificate=certificate,
+        )
+
+        raster_domain = DomainName(
+            self,
+            "raster-api-domain-name",
+            domain_name=f"{app_config.project_id}-raster.{app_config.domain_name}",
+            certificate=certificate,
+        )
+
+        vector_domain = DomainName(
+            self,
+            "vector-api-domain-name",
+            domain_name=f"{app_config.project_id}-vector.{app_config.domain_name}",
+            certificate=certificate,
+        )
+
+        config_domain = DomainName(
+            self,
+            "config-api-domain-name",
+            domain_name=f"{app_config.project_id}-config.{app_config.domain_name}",
+            certificate=certificate,
         )
 
         #######################################################################
@@ -85,7 +140,7 @@ class eoAPIStack(Stack):
             "stac-api",
             api_env={
                 "NAME": app_config.build_service_name("stac"),
-                "description": f"{app_config.stage} STAC API",
+                "description": f"{app_config.project_id} STAC API",
             },
             db=pgstac_db.connection_target,
             db_secret=pgstac_db.pgstac_secret,
@@ -98,6 +153,7 @@ class eoAPIStack(Stack):
             if not app_config.public_db_subnet
             else None,
             enable_snap_start=True,
+            domain_name=stac_domain,
         )
 
         #######################################################################
@@ -107,7 +163,7 @@ class eoAPIStack(Stack):
             "raster-api",
             api_env={
                 "NAME": app_config.build_service_name("raster"),
-                "description": f"{app_config.stage} Raster API",
+                "description": f"{app_config.project_id} Raster API",
                 "TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS": "True",
             },
             db=pgstac_db.connection_target,
@@ -122,6 +178,7 @@ class eoAPIStack(Stack):
             else None,
             enable_snap_start=True,
             buckets=["*"],
+            domain_name=raster_domain,
         )
 
         #######################################################################
@@ -133,7 +190,7 @@ class eoAPIStack(Stack):
             db_secret=pgstac_db.pgstac_secret,
             api_env={
                 "NAME": app_config.build_service_name("vector"),
-                "description": f"{app_config.stage} tipg API",
+                "description": f"{app_config.project_id} tipg API",
                 "TIPG_DB_SCHEMAS": '["features"]',
             },
             # If the db is not in the public subnet then we need to put
@@ -145,10 +202,52 @@ class eoAPIStack(Stack):
             if not app_config.public_db_subnet
             else None,
             enable_snap_start=True,
+            domain_name=vector_domain,
         )
 
         for api in [stac_api, titiler_pgstac_api, tipg_api]:
             api.node.add_dependency(pgstac_db.secret_bootstrapper)
+
+        #######################################################################
+        # DNS Records for API custom domains
+        route53.ARecord(
+            self,
+            "StacDnsRecord",
+            zone=hosted_zone,
+            record_name=f"{app_config.project_id}-stac",
+            target=route53.RecordTarget.from_alias(
+                ApiGatewayv2DomainProperties(
+                    stac_domain.regional_domain_name,
+                    stac_domain.regional_hosted_zone_id,
+                )
+            ),
+        )
+
+        route53.ARecord(
+            self,
+            "RasterDnsRecord",
+            zone=hosted_zone,
+            record_name=f"{app_config.project_id}-raster",
+            target=route53.RecordTarget.from_alias(
+                ApiGatewayv2DomainProperties(
+                    raster_domain.regional_domain_name,
+                    raster_domain.regional_hosted_zone_id,
+                )
+            ),
+        )
+
+        route53.ARecord(
+            self,
+            "VectorDnsRecord",
+            zone=hosted_zone,
+            record_name=f"{app_config.project_id}-vector",
+            target=route53.RecordTarget.from_alias(
+                ApiGatewayv2DomainProperties(
+                    vector_domain.regional_domain_name,
+                    vector_domain.regional_hosted_zone_id,
+                )
+            ),
+        )
 
         #######################################################################
         # Workshop Config Lambda - provides credentials and endpoints to workshop users
@@ -164,29 +263,55 @@ class eoAPIStack(Stack):
             environment={
                 "PGSTAC_SECRET_ARN": pgstac_db.pgstac_secret.secret_arn,
                 "WORKSHOP_TOKEN": app_config.workshop_token,
-                "STAC_API_ENDPOINT": stac_api.url,
-                "TITILER_PGSTAC_API_ENDPOINT": titiler_pgstac_api.url,
-                "TIPG_API_ENDPOINT": tipg_api.url,
+                "STAC_API_ENDPOINT": app_config.build_service_url("stac"),
+                "TITILER_PGSTAC_API_ENDPOINT": app_config.build_service_url("raster"),
+                "TIPG_API_ENDPOINT": app_config.build_service_url("vector"),
             },
         )
 
         # Grant Lambda permission to read the secret
         pgstac_db.pgstac_secret.grant_read(workshop_config_lambda)
 
-        # Create Function URL (public HTTPS endpoint)
-        workshop_config_url = workshop_config_lambda.add_function_url(
-            auth_type=aws_lambda.FunctionUrlAuthType.NONE,
-            cors=aws_lambda.FunctionUrlCorsOptions(
-                allowed_origins=["*"],
-                allowed_methods=[aws_lambda.HttpMethod.GET],
-                allowed_headers=["Authorization", "Content-Type"],
+        # Create HTTP API Gateway integration for the workshop config Lambda
+        workshop_config_integration = HttpLambdaIntegration(
+            "WorkshopConfigIntegration",
+            workshop_config_lambda,
+        )
+
+        workshop_config_api = HttpApi(
+            self,
+            "workshop-config-api",
+            default_integration=workshop_config_integration,
+        )
+
+        # Map the custom domain to the API
+        ApiMapping(
+            self,
+            "ConfigApiMapping",
+            api=workshop_config_api,
+            domain_name=config_domain,
+        )
+
+        # Add DNS record for workshop config API
+        config_domain_name = f"{app_config.project_id}-config.{app_config.domain_name}"
+
+        route53.ARecord(
+            self,
+            "ConfigDnsRecord",
+            zone=hosted_zone,
+            record_name=f"{app_config.project_id}-config",
+            target=route53.RecordTarget.from_alias(
+                ApiGatewayv2DomainProperties(
+                    config_domain.regional_domain_name,
+                    config_domain.regional_hosted_zone_id,
+                )
             ),
         )
 
         CfnOutput(
             self,
             "WorkshopConfigUrl",
-            value=workshop_config_url.url,
+            value=f"https://{config_domain_name}",
             description="URL for workshop configuration endpoint",
         )
 

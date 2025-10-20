@@ -11,16 +11,27 @@ from pydantic_settings import (
 
 
 class AppConfig(BaseSettings):
-    project_id: str = Field(description="Project ID", default="eoapi-workshop")
-    stage: str = Field(description="Stage of deployment", default="dev")
+    project_id: str = Field(description="Project ID", default="eoapi-workshop-dev")
 
-    # because of its validator, `tags` should always come after `project_id` and `stage`
+    # because of its validator, `tags` should always come after `project_id`
     tags: Optional[Dict[str, str]] = Field(
         description="""Tags to apply to resources. If none provided,
         will default to the defaults defined in `default_tags`.
         Note that if tags are passed to the CDK CLI via `--tags`,
         they will override any tags defined here.""",
         default=None,
+    )
+
+    domain_name: str = Field(
+        description="Base domain for custom domains", default="eoapi.dev"
+    )
+
+    hosted_zone_id: str = Field(
+        description="Route53 Hosted Zone ID for the domain",
+    )
+
+    certificate_arn: str = Field(
+        description="ARN of the ACM certificate for *.eoapi.dev or *.{project_id}.eoapi.dev",
     )
 
     vpc_id: str = Field(description="VPC ID")
@@ -48,7 +59,7 @@ class AppConfig(BaseSettings):
 
     @field_validator("tags")
     def default_tags(cls, v, info: ValidationInfo):
-        return v or {"project_id": info.data["project_id"], "stage": info.data["stage"]}
+        return v or {"project_id": info.data["project_id"]}
 
     @field_validator("workshop_token")
     def generate_token(cls, v):
@@ -56,7 +67,11 @@ class AppConfig(BaseSettings):
         return v or secrets.token_urlsafe(32)
 
     def build_service_name(self, service_id: str) -> str:
-        return f"{self.project_id}-{self.stage}-{service_id}"
+        return f"{self.project_id}-{service_id}"
+
+    def build_service_url(self, service: str) -> str:
+        """Build service URL from project_id and service name."""
+        return f"https://{self.project_id}-{service}.{self.domain_name}"
 
     @classmethod
     def settings_customise_sources(
