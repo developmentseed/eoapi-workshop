@@ -110,14 +110,15 @@ jobs:
             -lco PRECISION=NO \
             -nlt PROMOTE_TO_MULTI \
             -t_srs EPSG:4326 \
-            -simplify 0.001
+            -simplify 0.01
 
           # load a STAC collection
           echo 'fetching collection from MAAP STAC'
           curl https://stac.maap-project.org/collections/glad-global-forest-change-1.11 > /tmp/collection.json
 
           echo 'fetching items from MAAP STAC'
-          uvx rustac search https://stac.maap-project.org /tmp/items.json --collections glad-global-forest-change-1.11 --limit 100 -o json
+          uvx rustac search https://stac.maap-project.org --collections glad-global-forest-change-1.11 \
+            --limit 100 -o json | jq -c '.features[]' > /tmp/items.ndjson
 
           echo 'loading collection into pgstac database'
           uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections /tmp/collection.json --method=upsert
