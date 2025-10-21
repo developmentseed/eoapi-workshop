@@ -77,7 +77,7 @@ jobs:
           HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
           CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
 
-      - name: Load Workshop Data - Ecoregions
+      - name: Load Workshop Data
         run: |
           # Get database credentials from config endpoint
           CONFIG_URL="https://${{ vars.PROJECT_ID }}-config.eoapi.dev"
@@ -101,7 +101,7 @@ jobs:
           psql -c "CREATE SCHEMA IF NOT EXISTS features; DROP TABLE IF EXISTS features.ecoregions;"
 
           # Load data using GDAL
-          docker run --rm ghcr.io/osgeo/gdal:alpine-small-latest ogr2ogr -f "PostgreSQL" \
+          docker run --rm ghcr.io/osgeo/gdal:alpine-normal-latest ogr2ogr -f "PostgreSQL" \
             PG:"postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" \
             /vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp \
             -nln features.ecoregions \
@@ -113,8 +113,13 @@ jobs:
             -simplify 0.001
 
           # load a STAC collection
+          echo 'fetching collection from MAAP STAC'
           curl https://stac.maap-project.org/collections/glad-global-forest-change-1.11 > /tmp/collection.json
-          uvx rustac search https://stac.maap-project.org /tmp/items.ndjson --collections glad-global-forest-change-1.11 --limit 100 -o ndjson
 
+          echo 'fetching items from MAAP STAC'
+          uvx rustac search https://stac.maap-project.org /tmp/items.json --collections glad-global-forest-change-1.11 --limit 100 -o json
+
+          echo 'loading collection into pgstac database'
           uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections /tmp/collection.json --method=upsert
-          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load items /tmp/items.ndjson --method=upsert
+          echo 'loading items into pgstac database'
+          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load items /tmp/items.json --method=upsert
