@@ -1,6 +1,58 @@
 # eoAPI deployment
 
-## Deployment via GitHub Actions (Recommended)
+## Deployment Strategy
+
+This workshop uses a **single AWS stack, multiple workshop instances** approach:
+
+- **One AWS Deployment**: Deploy the eoAPI infrastructure (database, APIs, Lambda functions) once to AWS. This stack is persistent and serves all workshop variants.
+- **Multiple Workshop Variants**: Create different branches or tags with updated notebook content for different workshops. Each workshop points to the same AWS backend but can have customized learning materials.
+- **Flexible Content Updates**: Update workshop notebooks without redeploying AWS infrastructure. Simply create a new branch, update the Binder badge link in the README, and share the new link with participants.
+
+This approach minimizes AWS costs and deployment complexity while maximizing flexibility for workshop organizers.
+
+## When to Redeploy the Stack
+
+You only need to redeploy the AWS stack in these scenarios:
+
+1. **Initial Deployment**: First time setting up the workshop infrastructure
+2. **Stack Teardown Recovery**: The stack was destroyed (e.g., for cost savings) and needs to be recreated
+3. **Token Rotation**: Updating the `WORKSHOP_TOKEN` for security purposes after a workshop ends
+4. **New Infrastructure Arrangement**: Changes to VPC, networking, or other infrastructure configuration
+
+**To rotate the workshop token:**
+1. Go to GitHub Settings → Secrets and variables → Actions → Variables
+2. Update the `WORKSHOP_TOKEN` variable with a new value
+3. Run the CDK Deploy workflow from the Actions tab
+
+## Updating Workshop Content
+
+For new workshops with different or updated notebook materials:
+
+1. **Create a Branch or Tag**:
+   ```bash
+   git checkout -b workshop-name-2025
+   # Make your notebook changes
+   git commit -am "Update notebooks for workshop-name-2025"
+   git push origin workshop-name-2025
+   ```
+
+2. **Update the Binder Link**:
+   Edit the Binder badge in `README.md` to point to your new branch:
+   ```markdown
+   [![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-workshop/workshop-name-2025?urlpath=%2Fdoc%2Ftree%2Fdocs%2F00-introduction.ipynb)
+   ```
+
+3. **Share the Updated Link**: Participants clicking this link will get a JupyterHub instance with your updated notebooks, connected to the same AWS backend.
+
+**Benefits of this approach:**
+- No AWS redeployment needed
+- No additional infrastructure costs
+- Fast iteration on workshop content
+- Different workshops can run concurrently with the same backend
+
+## AWS Stack Deployment
+
+### Deployment via GitHub Actions (Recommended)
 
 The easiest way to deploy is using the GitHub Actions workflow, which automatically handles all dependencies and AWS authentication.
 
@@ -176,17 +228,28 @@ This should return JSON with all configuration values:
 }
 ```
 
-### 4. Load the Level III Ecoregions of North America features into a postgis table
+## Loading Workshop Data
 
-Start by querying the AWS CloudFormation Stack to get the pgstac database credentials
+**IMPORTANT**: This step is required for workshop participants to complete the vector notebook (`05-tipg.ipynb`). Load this data once after initial deployment - you do NOT need to reload it when updating workshop content or rotating tokens.
+
+### Load the Level III Ecoregions of North America
+
+This loads the ecoregions dataset used in the vector API workshop notebook.
+
+1. **Get database credentials from CloudFormation**:
 
 ```bash
-PGSTAC_STACK=eoapiworkshop
-PGSTAC_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name $PGSTAC_STACK --query "Stacks[0].Outputs[?OutputKey=='PgstacSecret'].OutputValue" --output text)
+STACK_NAME=your-project-id  # Replace with your PROJECT_ID
+
+PGSTAC_SECRET_ARN=$(aws cloudformation describe-stacks \
+  --stack-name $STACK_NAME \
+  --query "Stacks[0].Outputs[?OutputKey=='PgstacSecret'].OutputValue" \
+  --output text)
+
 PGSTAC_SECRET_VALUE=$(aws secretsmanager get-secret-value \
   --secret-id "$PGSTAC_SECRET_ARN" \
   --query "SecretString" \
-  --output text) 
+  --output text)
 
 export PGHOST=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.host')
 export PGPORT=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.port')
@@ -195,20 +258,16 @@ export PGUSER=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.username')
 export PGPASSWORD=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.password')
 ```
 
-Then use psql to create a new schema (`features`) and make sure there is a spot for the new table:
+2. **Create schema and prepare for data**:
 
 ```bash
-psql -c "CREATE SCHEMA features;"
+psql -c "CREATE SCHEMA IF NOT EXISTS features;"
 psql -c "DROP TABLE IF EXISTS features.ecoregions;"
-
 ```
 
-Use the `ogr2ogr` (via GDAL docker image) to write the ecoregion features from a zipped shapefile on the web directly to our PostGIS database table:
+3. **Load data using GDAL**:
 
 ```bash
-docker pull ghcr.io/osgeo/gdal:alpine-small-latest
- gdalinfo $PWD/my.tif
-
 docker run --rm ghcr.io/osgeo/gdal:alpine-small-latest ogr2ogr -f "PostgreSQL" \
   PG:"postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" \
   /vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp \
@@ -219,3 +278,5 @@ docker run --rm ghcr.io/osgeo/gdal:alpine-small-latest ogr2ogr -f "PostgreSQL" \
   -nlt PROMOTE_TO_MULTI \
   -t_srs EPSG:4326
 ```
+
+Once loaded, this data persists in the database and is available for all workshop variants.

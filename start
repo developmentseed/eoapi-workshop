@@ -1,13 +1,15 @@
 #!/bin/bash
 
-# Default workshop project ID
-# Can be overridden by setting WORKSHOP_PROJECT_ID before running
-export WORKSHOP_PROJECT_ID="eoapiworkshop"
+# Workshop configuration
+export WORKSHOP_PROJECT_ID="workshop"
+
+# API endpoints - publicly accessible
+export STAC_API_ENDPOINT="https://workshop-stac.eoapi.dev"
+export TITILER_PGSTAC_API_ENDPOINT="https://workshop-raster.eoapi.dev"
+export TIPG_API_ENDPOINT="https://workshop-vector.eoapi.dev"
+export CONFIG_API_ENDPOINT="https://workshop-config.eoapi.dev"
 
 # AWS configuration for public data access
 export AWS_NO_SIGN_REQUEST=TRUE
-
-echo "Workshop project: $WORKSHOP_PROJECT_ID"
-echo "Configuration will be fetched when notebooks are opened."
 
 exec "$@"
