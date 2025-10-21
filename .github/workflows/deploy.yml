@@ -97,10 +97,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-          # Create schema and prepare for data
+          echo 'loading North American ecoregions into database'
           psql -c "CREATE SCHEMA IF NOT EXISTS features; DROP TABLE IF EXISTS features.ecoregions;"
-
-          # Load data using GDAL
           docker run --rm ghcr.io/osgeo/gdal:alpine-normal-latest ogr2ogr -f "PostgreSQL" \
             PG:"postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" \
             /vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp \
@@ -110,7 +108,7 @@ jobs:
             -lco PRECISION=NO \
             -nlt PROMOTE_TO_MULTI \
             -t_srs EPSG:4326 \
-            -simplify 0.01
+            -simplify 100
 
           # load a STAC collection
           echo 'fetching collection from MAAP STAC'
