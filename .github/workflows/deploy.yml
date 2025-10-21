@@ -79,33 +79,26 @@ jobs:
 
       - name: Load Workshop Data - Ecoregions
         run: |
-          # Get database credentials from CloudFormation
-          PGSTAC_SECRET_ARN=$(aws cloudformation describe-stacks \
-            --stack-name ${{ vars.PROJECT_ID }} \
-            --query "Stacks[0].Outputs[?OutputKey=='PgstacSecret'].OutputValue" \
-            --output text)
+          # Get database credentials from config endpoint
+          CONFIG_URL="https://${{ vars.PROJECT_ID }}-config.eoapi.dev"
 
-          PGSTAC_SECRET_VALUE=$(aws secretsmanager get-secret-value \
-            --secret-id "$PGSTAC_SECRET_ARN" \
-            --query "SecretString" \
-            --output text)
+          echo "Fetching database credentials from: $CONFIG_URL"
+          CONFIG_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.WORKSHOP_TOKEN }}" "$CONFIG_URL")
 
-          export PGHOST=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.host')
-          export PGPORT=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.port')
-          export PGDATABASE=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.dbname')
-          export PGUSER=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.username')
-          export PGPASSWORD=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.password')
+          export PGHOST=$(echo "$CONFIG_RESPONSE" | jq -r '.pghost')
+          export PGPORT=$(echo "$CONFIG_RESPONSE" | jq -r '.pgport')
+          export PGDATABASE=$(echo "$CONFIG_RESPONSE" | jq -r '.pgdatabase')
+          export PGUSER=$(echo "$CONFIG_RESPONSE" | jq -r '.pguser')
+          export PGPASSWORD=$(echo "$CONFIG_RESPONSE" | jq -r '.pgpassword')
+
+          echo "✓ Database credentials fetched successfully"
 
           # Install PostgreSQL client
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
           # Create schema and prepare for data
-          PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
-            -c "CREATE SCHEMA IF NOT EXISTS features;"
-
-          PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
-            -c "DROP TABLE IF EXISTS features.ecoregions;"
+          psql -c "CREATE SCHEMA IF NOT EXISTS features; DROP TABLE IF EXISTS features.ecoregions;"
 
           # Load data using GDAL
           docker run --rm ghcr.io/osgeo/gdal:alpine-small-latest ogr2ogr -f "PostgreSQL" \
@@ -118,3 +111,10 @@ jobs:
             -nlt PROMOTE_TO_MULTI \
             -t_srs EPSG:4326 \
             -simplify 0.001
+
+          # load a STAC collection
+          curl https://stac.maap-project.org/collections/glad-global-forest-change-1.11 > /tmp/collection.json
+          uvx rustac search https://stac.maap-project.org /tmp/items.ndjson --collections glad-global-forest-change-1.11 --limit 100 -o ndjson
+
+          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections /tmp/collection.json --method=upsert
+          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load items /tmp/items.ndjson --method=upsert

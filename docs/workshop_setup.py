@@ -5,10 +5,6 @@ Usage in notebooks:
     from workshop_setup import setup
     config = setup()
 
-    # Access database configuration
-    print(config['pghost'])
-    print(config['pgdatabase'])
-
 Note: API endpoints are already configured in the environment via the start script.
 """
 
@@ -82,8 +78,6 @@ def setup(token: Optional[str] = None):
         os.environ["PGPASSWORD"] = config["pgpassword"]
 
         print("\n✓ Database credentials configured successfully!")
-        print(f"  Host: {config['pghost']}")
-        print(f"  Database: {config['pgdatabase']}")
 
         return config
 
