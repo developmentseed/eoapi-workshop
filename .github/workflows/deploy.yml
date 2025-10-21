@@ -76,3 +76,45 @@ jobs:
           PGSTAC_VERSION: ${{ vars.PGSTAC_VERSION }}
           HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
           CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+
+      - name: Load Workshop Data - Ecoregions
+        run: |
+          # Get database credentials from CloudFormation
+          PGSTAC_SECRET_ARN=$(aws cloudformation describe-stacks \
+            --stack-name ${{ vars.PROJECT_ID }} \
+            --query "Stacks[0].Outputs[?OutputKey=='PgstacSecret'].OutputValue" \
+            --output text)
+
+          PGSTAC_SECRET_VALUE=$(aws secretsmanager get-secret-value \
+            --secret-id "$PGSTAC_SECRET_ARN" \
+            --query "SecretString" \
+            --output text)
+
+          export PGHOST=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.host')
+          export PGPORT=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.port')
+          export PGDATABASE=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.dbname')
+          export PGUSER=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.username')
+          export PGPASSWORD=$(echo "$PGSTAC_SECRET_VALUE" | jq -r '.password')
+
+          # Install PostgreSQL client
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+          # Create schema and prepare for data
+          PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
+            -c "CREATE SCHEMA IF NOT EXISTS features;"
+
+          PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
+            -c "DROP TABLE IF EXISTS features.ecoregions;"
+
+          # Load data using GDAL
+          docker run --rm ghcr.io/osgeo/gdal:alpine-small-latest ogr2ogr -f "PostgreSQL" \
+            PG:"postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" \
+            /vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp \
+            -nln features.ecoregions \
+            -lco GEOMETRY_NAME=geom \
+            -lco FID=id \
+            -lco PRECISION=NO \
+            -nlt PROMOTE_TO_MULTI \
+            -t_srs EPSG:4326 \
+            -simplify 0.001

@@ -192,6 +192,8 @@ class eoAPIStack(Stack):
                 "NAME": app_config.build_service_name("vector"),
                 "description": f"{app_config.project_id} tipg API",
                 "TIPG_DB_SCHEMAS": '["features"]',
+                "TIPG_DB_SPATIAL_EXTENT": "FALSE",
+                "TIPG_DB_DATETIME_EXTENT": "FALSE",
             },
             # If the db is not in the public subnet then we need to put
             # the lambda within the VPC
