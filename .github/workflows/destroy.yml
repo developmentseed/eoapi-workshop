@@ -1,10 +1,10 @@
-name: CDK Deploy
+name: CDK Destroy
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch or tag to deploy'
+        description: 'Branch or tag to use'
         required: true
         default: 'main'
         type: string
@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  destroy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
 
@@ -53,20 +53,8 @@ jobs:
       - name: Install Node dependencies
         run: npm install
 
-      - name: CDK Synth
-        run: uv run npx cdk synth --all
-        env:
-          CDK_DEFAULT_ACCOUNT: ${{ steps.aws-creds.outputs.aws-account-id }}
-          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION }}
-          PROJECT_ID: ${{ vars.PROJECT_ID }}
-          VPC_ID: ${{ vars.VPC_ID }}
-          WORKSHOP_TOKEN: ${{ vars.WORKSHOP_TOKEN }}
-          PGSTAC_VERSION: ${{ vars.PGSTAC_VERSION }}
-          HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
-          CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
-
-      - name: CDK Deploy
-        run: uv run npx cdk deploy --all --require-approval never
+      - name: CDK Destroy
+        run: uv run npx cdk destroy --all --force
         env:
           CDK_DEFAULT_ACCOUNT: ${{ steps.aws-creds.outputs.aws-account-id }}
           CDK_DEFAULT_REGION: ${{ vars.AWS_REGION }}

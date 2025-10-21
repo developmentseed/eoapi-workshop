@@ -1,6 +1,6 @@
 # eoAPI Workshop
 
-[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-workshop/mngislis2025?urlpath=%2Fdoc%2Ftree%2Fdocs%2F00-introduction.ipynb)
+[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-workshop/main?urlpath=%2Fdoc%2Ftree%2Fdocs%2F00-introduction.ipynb)
 
 This repository contains the materials for the eoAPI workshop.
 
@@ -18,6 +18,7 @@ If you're participating in an eoAPI workshop, you'll access the notebooks throug
 4. **Start learning!** - All configuration (database credentials, API endpoints) will be automatically set up
 
 The workshop uses a deployed eoAPI stack with the following services:
+
 - **STAC API** (`stac-fastapi-pgstac`) - For searching STAC metadata
 - **Raster API** (`titiler-pgstac`) - For visualizing raster data dynamically
 - **Vector API** (`tipg`) - For serving vector features and tiles

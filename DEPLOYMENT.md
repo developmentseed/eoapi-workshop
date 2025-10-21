@@ -87,7 +87,8 @@ The easiest way to deploy is using the GitHub Actions workflow, which automatica
 2. Select the **CDK Deploy** workflow
 3. Click **Run workflow**
 4. Enter the branch or tag you want to deploy (defaults to `main`)
-5. Click **Run workflow**
+5. Enter the deployment environment name (defaults to `dev`)
+6. Click **Run workflow**
 
 The workflow will:
 - Check out your specified branch/tag
@@ -95,6 +96,25 @@ The workflow will:
 - Configure AWS credentials via OIDC
 - Synthesize the CDK stack
 - Deploy to AWS
+
+### Destroy
+
+To tear down the AWS stack (e.g., for cost savings after a workshop ends):
+
+1. Go to your repository's **Actions** tab
+2. Select the **CDK Destroy** workflow
+3. Click **Run workflow**
+4. Enter the branch or tag to use (defaults to `main`)
+5. Enter the deployment environment name (defaults to `dev`)
+6. Click **Run workflow**
+
+The workflow will:
+- Check out your specified branch/tag
+- Install all dependencies (Python via uv, Node.js)
+- Configure AWS credentials via OIDC
+- Destroy all CDK stack resources from AWS
+
+**Warning:** This action is irreversible and will delete all deployed resources including the database and its data. Make sure you have backups if needed before destroying the stack.
 
 ## Local Deployment
 
