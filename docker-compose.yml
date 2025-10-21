@@ -1,6 +1,6 @@
 services:
   database:
-    image: ghcr.io/stac-utils/pgstac:v0.9.6
+    image: ghcr.io/stac-utils/pgstac:v0.9.8
     environment:
       - POSTGRES_USER=username
       - POSTGRES_PASSWORD=password
@@ -17,7 +17,8 @@ services:
   features-loader:
     image: ghcr.io/osgeo/gdal:ubuntu-small-latest
     depends_on:
-      - database
+      database:
+        condition: service_started
     environment:
       - PGHOST=database
       - PGUSER=username
@@ -59,7 +60,7 @@ services:
 
 
   stac-fastapi:
-    image: ghcr.io/stac-utils/stac-fastapi-pgstac:5.0.2
+    image: ghcr.io/stac-utils/stac-fastapi-pgstac:6.0.2
     ports:
       - 8081:8081
     environment:
@@ -73,7 +74,10 @@ services:
       - DB_MIN_CONN_SIZE=1
       - DB_MAX_CONN_SIZE=1
     depends_on:
-      - database
+      database:
+        condition: service_started
+      features-loader:
+        condition: service_healthy
     command:
       bash -c "uvicorn stac_fastapi.pgstac.app:app --host 0.0.0.0 --port 8081"
     volumes:
@@ -81,7 +85,7 @@ services:
 
   titiler-pgstac:
     platform: linux/amd64
-    image: ghcr.io/stac-utils/titiler-pgstac:1.7.2
+    image: ghcr.io/stac-utils/titiler-pgstac:1.9.0
     ports:
       - 8082:8082
     environment:
@@ -112,12 +116,15 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     depends_on:
-      - database
+      database:
+        condition: service_started
+      features-loader:
+        condition: service_healthy
     command:
       bash -c "uvicorn titiler.pgstac.main:app  --host 0.0.0.0 --port 8082"
 
   tipg:
-    image: ghcr.io/developmentseed/tipg:1.0.1
+    image: ghcr.io/developmentseed/tipg:1.1.2
     ports:
       - 8083:8083
     environment:
@@ -151,7 +158,7 @@ services:
   jupyterhub:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.local
     ports:
       - 8888:8888
     volumes:

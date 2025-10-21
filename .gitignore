@@ -173,6 +173,8 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-config.yaml
 cdk.out/
+cdk.context.json
 node_modules/
+
+config.yaml

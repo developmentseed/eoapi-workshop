@@ -1,17 +1,34 @@
-# eoAPI FedGeoDay25 workshop
+# eoAPI Workshop
 
-This repository contains the materials for the eoAPI workshop at FedGeoDay25 in Washington D.C. on April 23, 2025.
+[![Binder](https://binder.opensci.2i2c.cloud/badge_logo.svg)](https://binder.opensci.2i2c.cloud/v2/gh/developmentseed/eoapi-workshop/mngislis2025?urlpath=%2Fdoc%2Ftree%2Fdocs%2F00-introduction.ipynb)
 
-For the in-person workshop we deployed eoAPI using [eoapi-cdk](https://github.com/developmentseed/eoapi-cdk) constructs in AWS us-west-2.
-Participants in the in-person workshop were provided with credentials for the `pgstac` database so they could interact with it during the tutorials.
+This repository contains the materials for the eoAPI workshop.
 
-Now the resources in AWS have been removed but we have updated this repository to work entirely locally in a docker network.
+The materials are all contained in Jupyter notebooks that participants can interact with in their web browser.
 
-## Running the tutorial
+## Workshop Participation
 
-This project uses a docker compose file to spin up a full eoAPI stack and a Jupyter Hub server that you can use to interact with the eoAPI services via Jupyter notebooks.
+If you're participating in an eoAPI workshop, you'll access the notebooks through a Jupyter Hub operated by [2i2c](https://2i2c.org).
 
-## Install docker and docker compose
+### Getting Started as a Participant
+
+1. **Access the Jupyter Hub** - Your instructor will provide a link to the workshop's Jupyter Hub
+2. **Open a notebook** - Navigate to the `docs/` folder and open any notebook
+3. **Enter the workshop token** - When you run the first cell (`workshop_setup.setup()`), you'll be prompted to enter the workshop token provided by your instructor
+4. **Start learning!** - All configuration (database credentials, API endpoints) will be automatically set up
+
+The workshop uses a deployed eoAPI stack with the following services:
+- **STAC API** (`stac-fastapi-pgstac`) - For searching STAC metadata
+- **Raster API** (`titiler-pgstac`) - For visualizing raster data dynamically
+- **Vector API** (`tipg`) - For serving vector features and tiles
+
+All services are accessible via custom domains following the pattern: `{service}.{PROJECT_ID}.eoapi.dev`
+
+## Local Development
+
+If you want to run the workshop materials locally on your own machine, you can use Docker Compose to spin up a full eoAPI stack and Jupyter Hub server.
+
+### Install docker and docker compose
 
 - **Windows/Mac**: Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - **Linux**: Follow the [official installation instructions](https://docs.docker.com/engine/install/) for your distribution
@@ -63,8 +80,8 @@ Once authenticated, Docker will be able to pull the required container images fr
 ### Clone this repository and start the docker network
 
 ```bash
-git clone https://github.com/developmentseed/eoapi-fedgeoday25-workshop.git
-cd eoapi-fedgeoday25-workshop
+git clone https://github.com/developmentseed/eoapi-workshop.git
+cd eoapi-workshop
 docker compose up
 ```
 

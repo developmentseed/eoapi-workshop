@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - jupyterlab
+  - jq
   - gdal=3.10
   - python=3.12
   - rust
@@ -16,5 +17,6 @@ dependencies:
   - rio-stac
   - shapely
   - pip:
-    - pypgstac[psycopg]==0.9.6
+    - haikunator
+    - pypgstac[psycopg]==0.9.8
     - stactools-sentinel2

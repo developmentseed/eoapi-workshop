@@ -1,0 +1,73 @@
+name: CDK Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or tag to deploy'
+        required: true
+        default: 'main'
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Configure AWS credentials
+        id: aws-creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{  vars.DEPLOY_IAM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Install Python dependencies
+        run: uv sync --all-groups
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: CDK Synth
+        run: uv run npx cdk synth --all
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ steps.aws-creds.outputs.aws-account-id }}
+          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION }}
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          VPC_ID: ${{ vars.VPC_ID }}
+          WORKSHOP_TOKEN: ${{ vars.WORKSHOP_TOKEN }}
+          PGSTAC_VERSION: ${{ vars.PGSTAC_VERSION }}
+          HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+          CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+
+      - name: CDK Deploy
+        run: uv run npx cdk deploy --all --require-approval never
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ steps.aws-creds.outputs.aws-account-id }}
+          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION }}
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          VPC_ID: ${{ vars.VPC_ID }}
+          WORKSHOP_TOKEN: ${{ vars.WORKSHOP_TOKEN }}
+          PGSTAC_VERSION: ${{ vars.PGSTAC_VERSION }}
+          HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+          CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
