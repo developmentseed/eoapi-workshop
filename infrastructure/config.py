@@ -1,5 +1,4 @@
 import secrets
-from typing import Dict, Optional, Tuple, Type
 
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import (
@@ -14,7 +13,7 @@ class AppConfig(BaseSettings):
     project_id: str = Field(description="Project ID", default="eoapi-workshop-dev")
 
     # because of its validator, `tags` should always come after `project_id`
-    tags: Optional[Dict[str, str]] = Field(
+    tags: dict[str, str] | None = Field(
         description="""Tags to apply to resources. If none provided,
         will default to the defaults defined in `default_tags`.
         Note that if tags are passed to the CDK CLI via `--tags`,
@@ -76,12 +75,12 @@ class AppConfig(BaseSettings):
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: Type[BaseSettings],
+        settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
-    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
         return (
             init_settings,
             env_settings,
