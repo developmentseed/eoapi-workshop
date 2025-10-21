@@ -10,12 +10,11 @@ Note: API endpoints are already configured in the environment via the start scri
 
 import os
 import random
-from typing import Optional
 
 import httpx
 
 
-def setup(token: Optional[str] = None):
+def setup(token: str | None = None):
     """
     Fetch database credentials from workshop config endpoint.
 
