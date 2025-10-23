@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch or tag to deploy'
+        description: "Branch or tag to deploy"
         required: true
-        default: 'main'
+        default: "main"
         type: string
       environment:
-        description: 'Deployment environment name'
+        description: "Deployment environment name"
         required: true
-        default: 'dev'
+        default: "dev"
         type: string
 
 permissions:
@@ -37,8 +37,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
+          node-version-file: ".nvmrc"
+          cache: "npm"
 
       - name: Configure AWS credentials
         id: aws-creds
@@ -58,7 +58,7 @@ jobs:
         env:
           CDK_DEFAULT_ACCOUNT: ${{ steps.aws-creds.outputs.aws-account-id }}
           CDK_DEFAULT_REGION: ${{ vars.AWS_REGION }}
-          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          PROJECT: ${{ vars.PROJECT }}
           VPC_ID: ${{ vars.VPC_ID }}
           WORKSHOP_TOKEN: ${{ vars.WORKSHOP_TOKEN }}
           PGSTAC_VERSION: ${{ vars.PGSTAC_VERSION }}
@@ -70,7 +70,7 @@ jobs:
         env:
           CDK_DEFAULT_ACCOUNT: ${{ steps.aws-creds.outputs.aws-account-id }}
           CDK_DEFAULT_REGION: ${{ vars.AWS_REGION }}
-          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          PROJECT: ${{ vars.PROJECT }}
           VPC_ID: ${{ vars.VPC_ID }}
           WORKSHOP_TOKEN: ${{ vars.WORKSHOP_TOKEN }}
           PGSTAC_VERSION: ${{ vars.PGSTAC_VERSION }}
@@ -80,7 +80,7 @@ jobs:
       - name: Load Workshop Data
         run: |
           # Get database credentials from config endpoint
-          CONFIG_URL="https://${{ vars.PROJECT_ID }}-config.eoapi.dev"
+          CONFIG_URL="https://${{ vars.PROJECT }}-config.eoapi.dev"
 
           echo "Fetching database credentials from: $CONFIG_URL"
           CONFIG_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.WORKSHOP_TOKEN }}" "$CONFIG_URL")

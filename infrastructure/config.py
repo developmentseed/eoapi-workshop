@@ -1,6 +1,6 @@
 import secrets
 
-from pydantic import Field, ValidationInfo, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -10,16 +10,22 @@ from pydantic_settings import (
 
 
 class AppConfig(BaseSettings):
-    project_id: str = Field(description="Project ID", default="eoapi-workshop-dev")
+    # Tags
+    name: str = "eoapi-workshop"
+    stage: str = "dev"
+    owner: str = "eoapi"
+    project: str = "workshop"
+    release: str = "dev"
 
-    # because of its validator, `tags` should always come after `project_id`
-    tags: dict[str, str] | None = Field(
-        description="""Tags to apply to resources. If none provided,
-        will default to the defaults defined in `default_tags`.
-        Note that if tags are passed to the CDK CLI via `--tags`,
-        they will override any tags defined here.""",
-        default=None,
-    )
+    @property
+    def tags(self) -> dict[str, str]:
+        return {
+            "Project": self.project,
+            "Owner": self.owner,
+            "Stage": self.stage,
+            "Name": self.name,
+            "Release": self.release,
+        }
 
     domain_name: str = Field(
         description="Base domain for custom domains", default="eoapi.dev"
@@ -30,7 +36,7 @@ class AppConfig(BaseSettings):
     )
 
     certificate_arn: str = Field(
-        description="ARN of the ACM certificate for *.eoapi.dev or *.{project_id}.eoapi.dev",
+        description="ARN of the ACM certificate for *.eoapi.dev or *.{project}.eoapi.dev",
     )
 
     vpc_id: str = Field(description="VPC ID")
@@ -56,21 +62,17 @@ class AppConfig(BaseSettings):
         env_file=".env", yaml_file="config.yaml", extra="allow"
     )
 
-    @field_validator("tags")
-    def default_tags(cls, v, info: ValidationInfo):
-        return v or {"project_id": info.data["project_id"]}
-
     @field_validator("workshop_token")
     def generate_token(cls, v):
         """Generate a random workshop token if not provided."""
         return v or secrets.token_urlsafe(32)
 
     def build_service_name(self, service_id: str) -> str:
-        return f"{self.project_id}-{service_id}"
+        return f"{self.project}-{service_id}"
 
     def build_service_url(self, service: str) -> str:
-        """Build service URL from project_id and service name."""
-        return f"https://{self.project_id}-{service}.{self.domain_name}"
+        """Build service URL from project and service name."""
+        return f"https://{self.project}-{service}.{self.domain_name}"
 
     @classmethod
     def settings_customise_sources(
