@@ -1,5 +1,4 @@
 project: "eoapi-fedgeoday25"
-stage: "dev"
 owner: hrodmn
 
 # Database Options

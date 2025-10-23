@@ -12,7 +12,6 @@ from pydantic_settings import (
 class AppConfig(BaseSettings):
     # Tags
     name: str = "eoapi-workshop"
-    stage: str = "dev"
     owner: str = "eoapi"
     project: str = "workshop"
     release: str = "dev"
@@ -22,7 +21,6 @@ class AppConfig(BaseSettings):
         return {
             "Project": self.project,
             "Owner": self.owner,
-            "Stage": self.stage,
             "Name": self.name,
             "Release": self.release,
         }
