@@ -23,7 +23,7 @@ The workshop uses a deployed eoAPI stack with the following services:
 - **Raster API** (`titiler-pgstac`) - For visualizing raster data dynamically
 - **Vector API** (`tipg`) - For serving vector features and tiles
 
-All services are accessible via custom domains following the pattern: `{service}.{PROJECT_ID}.eoapi.dev`
+All services are accessible via custom domains following the pattern: `{service}.{PROJECT}.eoapi.dev`
 
 ## Local Development
 

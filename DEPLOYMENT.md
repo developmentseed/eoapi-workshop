@@ -68,7 +68,7 @@ The easiest way to deploy is using the GitHub Actions workflow, which automatica
 
    - `DEPLOY_IAM_ROLE_ARN` - ARN of the IAM role for GitHub Actions to assume
    - `AWS_REGION` - AWS region (e.g., `us-east-1`)
-   - `PROJECT_ID` - Project identifier (e.g., `eoapi-workshop-dev`)
+   - `PROJECT` - Project identifier (e.g., `eoapi-workshop-dev`)
    - `VPC_ID` - **Required** - VPC ID where resources will be deployed
    - `HOSTED_ZONE_ID` - **Required** - Route53 hosted zone ID for `eoapi.dev` domain
    - `CERTIFICATE_ARN` - **Required** - ACM certificate ARN for `*.eoapi.dev` wildcard certificate
@@ -169,14 +169,14 @@ After deployment completes, share the following information with workshop partic
 
 ### Custom Domains
 
-All services are accessible via custom domains following the pattern `{service}.{PROJECT_ID}.eoapi.dev`:
+All services are accessible via custom domains following the pattern `{service}.{PROJECT}.eoapi.dev`:
 
-- **Config Lambda**: `https://config.{PROJECT_ID}.eoapi.dev`
-- **STAC API**: `https://stac.{PROJECT_ID}.eoapi.dev`
-- **Raster API**: `https://raster.{PROJECT_ID}.eoapi.dev`
-- **Vector API**: `https://vector.{PROJECT_ID}.eoapi.dev`
+- **Config Lambda**: `https://{PROJECT}-config.eoapi.dev`
+- **STAC API**: `https://{PROJECT}-stac.eoapi.dev`
+- **Raster API**: `https://{PROJECT}-raster.eoapi.dev`
+- **Vector API**: `https://{PROJECT}-vector.eoapi.dev`
 
-For example, with `PROJECT_ID=eoapi-workshop-dev`:
+For example, with `PROJECT=eoapi-workshop-dev`:
 - Config: `https://config.eoapi-workshop-dev.eoapi.dev`
 - STAC: `https://stac.eoapi-workshop-dev.eoapi.dev`
 
@@ -185,7 +185,7 @@ For example, with `PROJECT_ID=eoapi-workshop-dev`:
 After deployment, retrieve the workshop token from CloudFormation outputs:
 
 ```bash
-STACK_NAME=your-project-id  # Replace with your PROJECT_ID
+STACK_NAME=your-project-id  # Replace with your PROJECT
 
 # Get the workshop token
 WORKSHOP_TOKEN=$(aws cloudformation describe-stacks \
@@ -198,7 +198,7 @@ echo "Workshop Token: $WORKSHOP_TOKEN"
 
 Share this information with participants:
 
-1. **Project ID**: Your `PROJECT_ID` (e.g., `eoapi-workshop-mngislis2025`)
+1. **Project ID**: Your `PROJECT` (e.g., `eoapi-workshop-mngislis2025`)
 2. **Workshop Token**: The token retrieved above
 
 You can share via:
@@ -215,8 +215,8 @@ You can share via:
 
 When you open a notebook in the workshop environment, you'll be prompted to enter the workshop token. The `workshop_setup.setup()` function will:
 
-1. Read the `PROJECT_ID` from your environment (set by the `start` script)
-2. Construct the config Lambda URL: `https://config.{PROJECT_ID}.eoapi.dev`
+1. Read the `PROJECT` from your environment (set by the `start` script)
+2. Construct the config Lambda URL: `https://config.{PROJECT}.eoapi.dev`
 3. Prompt you for the workshop token
 4. Fetch and configure all necessary credentials and API endpoints
 
@@ -227,8 +227,8 @@ All configuration happens automatically - no manual setup required!
 You can verify that the endpoint works correctly:
 
 ```bash
-PROJECT_ID=your-project-id  # Replace with your PROJECT_ID
-CONFIG_URL="https://config.${PROJECT_ID}.eoapi.dev"
+PROJECT=your-project-id  # Replace with your PROJECT
+CONFIG_URL="https://config.${PROJECT}.eoapi.dev"
 
 curl -H "Authorization: Bearer $WORKSHOP_TOKEN" $CONFIG_URL | jq .
 ```
@@ -259,7 +259,7 @@ This loads the ecoregions dataset used in the vector API workshop notebook.
 1. **Get database credentials from CloudFormation**:
 
 ```bash
-STACK_NAME=your-project-id  # Replace with your PROJECT_ID
+STACK_NAME=your-project-id  # Replace with your PROJECT
 
 PGSTAC_SECRET_ARN=$(aws cloudformation describe-stacks \
   --stack-name $STACK_NAME \

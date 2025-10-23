@@ -73,28 +73,28 @@ class eoAPIStack(Stack):
         stac_domain = DomainName(
             self,
             "stac-api-domain-name",
-            domain_name=f"{app_config.project_id}-stac.{app_config.domain_name}",
+            domain_name=f"{app_config.project}-stac.{app_config.domain_name}",
             certificate=certificate,
         )
 
         raster_domain = DomainName(
             self,
             "raster-api-domain-name",
-            domain_name=f"{app_config.project_id}-raster.{app_config.domain_name}",
+            domain_name=f"{app_config.project}-raster.{app_config.domain_name}",
             certificate=certificate,
         )
 
         vector_domain = DomainName(
             self,
             "vector-api-domain-name",
-            domain_name=f"{app_config.project_id}-vector.{app_config.domain_name}",
+            domain_name=f"{app_config.project}-vector.{app_config.domain_name}",
             certificate=certificate,
         )
 
         config_domain = DomainName(
             self,
             "config-api-domain-name",
-            domain_name=f"{app_config.project_id}-config.{app_config.domain_name}",
+            domain_name=f"{app_config.project}-config.{app_config.domain_name}",
             certificate=certificate,
         )
 
@@ -140,7 +140,7 @@ class eoAPIStack(Stack):
             "stac-api",
             api_env={
                 "NAME": app_config.build_service_name("stac"),
-                "description": f"{app_config.project_id} STAC API",
+                "description": f"{app_config.project} STAC API",
             },
             db=pgstac_db.connection_target,
             db_secret=pgstac_db.pgstac_secret,
@@ -163,7 +163,7 @@ class eoAPIStack(Stack):
             "raster-api",
             api_env={
                 "NAME": app_config.build_service_name("raster"),
-                "description": f"{app_config.project_id} Raster API",
+                "description": f"{app_config.project} Raster API",
                 "TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS": "True",
             },
             db=pgstac_db.connection_target,
@@ -190,7 +190,7 @@ class eoAPIStack(Stack):
             db_secret=pgstac_db.pgstac_secret,
             api_env={
                 "NAME": app_config.build_service_name("vector"),
-                "description": f"{app_config.project_id} tipg API",
+                "description": f"{app_config.project} tipg API",
                 "TIPG_DB_SCHEMAS": '["features"]',
                 "TIPG_DB_SPATIAL_EXTENT": "FALSE",
                 "TIPG_DB_DATETIME_EXTENT": "FALSE",
@@ -216,7 +216,7 @@ class eoAPIStack(Stack):
             self,
             "StacDnsRecord",
             zone=hosted_zone,
-            record_name=f"{app_config.project_id}-stac",
+            record_name=f"{app_config.project}-stac",
             target=route53.RecordTarget.from_alias(
                 ApiGatewayv2DomainProperties(
                     stac_domain.regional_domain_name,
@@ -229,7 +229,7 @@ class eoAPIStack(Stack):
             self,
             "RasterDnsRecord",
             zone=hosted_zone,
-            record_name=f"{app_config.project_id}-raster",
+            record_name=f"{app_config.project}-raster",
             target=route53.RecordTarget.from_alias(
                 ApiGatewayv2DomainProperties(
                     raster_domain.regional_domain_name,
@@ -242,7 +242,7 @@ class eoAPIStack(Stack):
             self,
             "VectorDnsRecord",
             zone=hosted_zone,
-            record_name=f"{app_config.project_id}-vector",
+            record_name=f"{app_config.project}-vector",
             target=route53.RecordTarget.from_alias(
                 ApiGatewayv2DomainProperties(
                     vector_domain.regional_domain_name,
@@ -295,13 +295,13 @@ class eoAPIStack(Stack):
         )
 
         # Add DNS record for workshop config API
-        config_domain_name = f"{app_config.project_id}-config.{app_config.domain_name}"
+        config_domain_name = f"{app_config.project}-config.{app_config.domain_name}"
 
         route53.ARecord(
             self,
             "ConfigDnsRecord",
             zone=hosted_zone,
-            record_name=f"{app_config.project_id}-config",
+            record_name=f"{app_config.project}-config",
             target=route53.RecordTarget.from_alias(
                 ApiGatewayv2DomainProperties(
                     config_domain.regional_domain_name,
@@ -338,7 +338,7 @@ env = Environment(
 eoapi_stack = eoAPIStack(
     scope=app,
     app_config=app_config,
-    id=app_config.project_id,
+    id=app_config.project,
     env=env,
 )
 

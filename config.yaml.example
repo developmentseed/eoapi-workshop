@@ -1,6 +1,5 @@
-project_id: "eoapi-fedgeoday25"
-stage: "dev"
-tags: {owner: hrodmn}
+project: "eoapi-fedgeoday25"
+owner: hrodmn
 
 # Database Options
 db_instance_type: 't3.micro'
