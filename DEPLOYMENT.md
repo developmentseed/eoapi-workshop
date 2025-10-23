@@ -171,10 +171,10 @@ After deployment completes, share the following information with workshop partic
 
 All services are accessible via custom domains following the pattern `{service}.{PROJECT}.eoapi.dev`:
 
-- **Config Lambda**: `https://config.{PROJECT}.eoapi.dev`
-- **STAC API**: `https://stac.{PROJECT}.eoapi.dev`
-- **Raster API**: `https://raster.{PROJECT}.eoapi.dev`
-- **Vector API**: `https://vector.{PROJECT}.eoapi.dev`
+- **Config Lambda**: `https://{PROJECT}-config.eoapi.dev`
+- **STAC API**: `https://{PROJECT}-stac.eoapi.dev`
+- **Raster API**: `https://{PROJECT}-raster.eoapi.dev`
+- **Vector API**: `https://{PROJECT}-vector.eoapi.dev`
 
 For example, with `PROJECT=eoapi-workshop-dev`:
 - Config: `https://config.eoapi-workshop-dev.eoapi.dev`
