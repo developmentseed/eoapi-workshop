@@ -1,11 +1,9 @@
-import os
 from pathlib import Path
 
 from aws_cdk import (
     App,
     CfnOutput,
     Duration,
-    Environment,
     RemovalPolicy,
     Stack,
     aws_ec2,
@@ -377,12 +375,6 @@ app = App()
 
 app_config = AppConfig()
 
-# Get AWS account and region from environment (uses AWS_PROFILE)
-env = Environment(
-    account=os.environ.get("CDK_DEFAULT_ACCOUNT"),
-    region=os.environ.get("CDK_DEFAULT_REGION"),
-)
-
 vpc_stack = VpcStack(
     scope=app,
     app_config=app_config,
@@ -394,7 +386,6 @@ eoapi_stack = eoAPIStack(
     app_config=app_config,
     id=app_config.project,
     vpc=vpc_stack.vpc,
-    env=env,
 )
 
 app.synth()
