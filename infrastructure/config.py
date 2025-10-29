@@ -37,8 +37,6 @@ class AppConfig(BaseSettings):
         description="ARN of the ACM certificate for *.eoapi.dev or *.{project}.eoapi.dev",
     )
 
-    vpc_id: str = Field(description="VPC ID")
-
     pgstac_version: str = Field(description="pgstac version", default="0.9.8")
 
     db_instance_type: str = Field(
