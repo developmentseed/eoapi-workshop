@@ -1,11 +1,9 @@
-import os
 from pathlib import Path
 
 from aws_cdk import (
     App,
     CfnOutput,
     Duration,
-    Environment,
     RemovalPolicy,
     Stack,
     aws_ec2,
@@ -31,11 +29,65 @@ from eoapi_cdk import (
 )
 
 
+class VpcStack(Stack):
+    def __init__(
+        self, scope: Construct, app_config: AppConfig, id: str, **kwargs
+    ) -> None:
+        super().__init__(scope, id=id, tags=app_config.tags, **kwargs)
+
+        self.vpc = aws_ec2.Vpc(
+            self,
+            "vpc",
+            subnet_configuration=[
+                aws_ec2.SubnetConfiguration(
+                    name="ingress", subnet_type=aws_ec2.SubnetType.PUBLIC, cidr_mask=24
+                ),
+                aws_ec2.SubnetConfiguration(
+                    name="application",
+                    subnet_type=aws_ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    cidr_mask=24,
+                ),
+                aws_ec2.SubnetConfiguration(
+                    name="rds",
+                    subnet_type=aws_ec2.SubnetType.PRIVATE_ISOLATED,
+                    cidr_mask=24,
+                ),
+            ],
+            nat_gateways=0,
+        )
+
+        self.vpc.add_interface_endpoint(
+            "SecretsManagerEndpoint",
+            service=aws_ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+        )
+
+        self.vpc.add_interface_endpoint(
+            "CloudWatchEndpoint",
+            service=aws_ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+        )
+
+        self.vpc.add_gateway_endpoint(
+            "S3", service=aws_ec2.GatewayVpcEndpointAwsService.S3
+        )
+
+        self.export_value(
+            self.vpc.select_subnets(subnet_type=aws_ec2.SubnetType.PUBLIC)
+            .subnets[0]
+            .subnet_id
+        )
+        self.export_value(
+            self.vpc.select_subnets(subnet_type=aws_ec2.SubnetType.PUBLIC)
+            .subnets[1]
+            .subnet_id
+        )
+
+
 class eoAPIStack(Stack):
     def __init__(
         self,
         scope: Construct,
         id: str,
+        vpc: aws_ec2.Vpc,
         app_config: AppConfig,
         **kwargs,
     ) -> None:
@@ -44,12 +96,6 @@ class eoAPIStack(Stack):
             id=id,
             tags=app_config.tags,
             **kwargs,
-        )
-
-        vpc = aws_ec2.Vpc.from_lookup(
-            self,
-            f"{id}-vpc",
-            vpc_id=app_config.vpc_id,
         )
 
         #######################################################################
@@ -329,17 +375,17 @@ app = App()
 
 app_config = AppConfig()
 
-# Get AWS account and region from environment (uses AWS_PROFILE)
-env = Environment(
-    account=os.environ.get("CDK_DEFAULT_ACCOUNT"),
-    region=os.environ.get("CDK_DEFAULT_REGION"),
+vpc_stack = VpcStack(
+    scope=app,
+    app_config=app_config,
+    id=f"vpc{app_config.project}",
 )
 
 eoapi_stack = eoAPIStack(
     scope=app,
     app_config=app_config,
     id=app_config.project,
-    env=env,
+    vpc=vpc_stack.vpc,
 )
 
 app.synth()
