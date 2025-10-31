@@ -14,7 +14,7 @@ If you're participating in an eoAPI workshop, you'll access the notebooks throug
 
 1. **Access the Jupyter Hub** - Your instructor will provide a link to the workshop's Jupyter Hub
 2. **Open a notebook** - Navigate to the `docs/` folder and open any notebook
-3. **Enter the workshop token** - When you run the first cell (`workshop_setup.setup()`), you'll be prompted to enter the workshop token provided by your instructor
+3. **Enter the workshop token** - When you get to the [second notebook](./docs/02-database.ipynb), you'll be prompted to enter the workshop token provided by your instructor (via `workshop_setup.setup()`)
 4. **Start learning!** - All configuration (database credentials, API endpoints) will be automatically set up
 
 The workshop uses a deployed eoAPI stack with the following services:
@@ -99,4 +99,4 @@ This will start up 6 services:
 
 ## Deploying to AWS
 
-If you are interested deplying a production-ready version of the eoAPI stack, you can deploy the same stack that we used in the in-person workshop to AWS using eoapi-cdk constructs. See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
+If you are interested deploying a production-ready version of the eoAPI stack, you can deploy the same stack that we used in the in-person workshop to AWS using eoapi-cdk constructs. See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
