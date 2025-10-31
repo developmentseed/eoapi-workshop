@@ -2,9 +2,9 @@
 
 ## Deployment Strategy
 
-This workshop uses a **single AWS stack, multiple workshop instances** approach:
+This workshop uses a **simple AWS stacks, multiple workshop instances** approach:
 
-- **One AWS Deployment**: Deploy the eoAPI infrastructure (database, APIs, Lambda functions) once to AWS. This stack is persistent and serves all workshop variants.
+- **One AWS Deployment**: Deploy the eoAPI infrastructure (database, APIs, Lambda functions) once to AWS. These stacks are persistent and serves all workshop variants.
 - **Multiple Workshop Variants**: Create different branches or tags with updated notebook content for different workshops. Each workshop points to the same AWS backend but can have customized learning materials.
 - **Flexible Content Updates**: Update workshop notebooks without redeploying AWS infrastructure. Simply create a new branch, update the Binder badge link in the README, and share the new link with participants.
 
@@ -12,10 +12,10 @@ This approach minimizes AWS costs and deployment complexity while maximizing fle
 
 ## When to Redeploy the Stack
 
-You only need to redeploy the AWS stack in these scenarios:
+You only need to redeploy the AWS stacks in these scenarios:
 
 1. **Initial Deployment**: First time setting up the workshop infrastructure
-2. **Stack Teardown Recovery**: The stack was destroyed (e.g., for cost savings) and needs to be recreated
+2. **Stack Teardown Recovery**: The stacks were destroyed (e.g., for cost savings) and needs to be recreated
 3. **Token Rotation**: Updating the `WORKSHOP_TOKEN` for security purposes after a workshop ends
 4. **New Infrastructure Arrangement**: Changes to VPC, networking, or other infrastructure configuration
 
@@ -94,12 +94,12 @@ The workflow will:
 - Check out your specified branch/tag
 - Install all dependencies (Python via uv, Node.js)
 - Configure AWS credentials via OIDC
-- Synthesize the CDK stack
+- Synthesize the CDK stacks
 - Deploy to AWS
 
 ### Destroy
 
-To tear down the AWS stack (e.g., for cost savings after a workshop ends):
+To tear down the AWS stacks (e.g., for cost savings after a workshop ends):
 
 1. Go to your repository's **Actions** tab
 2. Select the **CDK Destroy** workflow
