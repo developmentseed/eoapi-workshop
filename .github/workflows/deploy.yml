@@ -110,7 +110,7 @@ jobs:
             -t_srs EPSG:4326 \
             -simplify 100
 
-          # load a STAC collection
+          # load a STAC collection from MAAP
           echo 'fetching collection from MAAP STAC'
           curl https://stac.maap-project.org/collections/glad-global-forest-change-1.11 > /tmp/collection.json
 
@@ -122,3 +122,9 @@ jobs:
           uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections /tmp/collection.json --method=upsert
           echo 'loading items into pgstac database'
           uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load items /tmp/items.ndjson --method=upsert
+          
+          # load an example STAC collection for use in the website
+          echo 'loading collection into pgstac database'
+          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections data/example-collection.json --method=upsert
+          echo 'loading items into pgstac database'
+          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load items data/example-items.ndjson --method=upsert
