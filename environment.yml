@@ -16,6 +16,7 @@ dependencies:
   - rasterio
   - rio-stac
   - shapely
+  - sqlite>=3.32.3
   - pip:
     - haikunator
     - pypgstac[psycopg]==0.9.8
