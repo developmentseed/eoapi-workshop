@@ -1,0 +1,21 @@
+apiVersion: v2
+name: eoapi-workshop
+description: Minimal, docker-compose-aligned eoAPI deployment for the workshop (no observability/monitoring stack)
+type: application
+version: 0.1.0
+# appVersion tracks the eoAPI application shipped by the eoapi dependency below.
+appVersion: "6.3.1"
+icon: https://eoapi.dev/img/eoAPI.png
+home: https://github.com/developmentseed/eoapi-workshop
+sources:
+  - https://github.com/developmentseed/eoapi-workshop
+  - https://github.com/developmentseed/eoapi-k8s
+dependencies:
+  # Upstream eoAPI chart. Its packaged .tgz vendors its own subcharts
+  # (postgrescluster, stac-auth-proxy, prometheus, grafana, knative, ...).
+  # Disabled components are turned off via values; their `condition` flags
+  # keep them from rendering, so only the workshop services are deployed.
+  # NOTE: devseed.com/eoapi-k8s/ 301-redirects to developmentseed.org/eoapi-k8s/.
+  - name: eoapi
+    version: 0.13.1
+    repository: https://developmentseed.org/eoapi-k8s/

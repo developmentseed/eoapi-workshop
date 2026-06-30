@@ -1,0 +1,6 @@
+dependencies:
+- name: eoapi
+  repository: https://developmentseed.org/eoapi-k8s/
+  version: 0.13.1
+digest: sha256:d779692bc842571128c0a8e3f0e7dfdf0a8344db4f3385ee5945921fc2343621
+generated: "2026-06-30T17:09:54.770014+03:00"
