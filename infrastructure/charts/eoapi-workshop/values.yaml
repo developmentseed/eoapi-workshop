@@ -16,6 +16,15 @@
 # Using any other release name or namespace breaks stac-auth-proxy's OIDC
 # discovery. See README.md.
 #
+# !!! HOST IS A DEPLOY-TIME INPUT !!!
+# The externally-reachable host appears in four places below (ingress.host plus
+# three auth URLs) and defaults to `localhost` — a LOCAL-ONLY fallback for kind/
+# minikube/k3s, matching the docker-compose workflow. On a remote cluster you do
+# NOT edit these: deploy with `./deploy.sh` (or set INGRESS_HOST), which discovers
+# the ingress LoadBalancer host and overrides all four at install time. Keeping
+# the cluster-specific host out of this file is deliberate — it stays portable.
+# See README.md "Remote clusters".
+#
 # All values are nested under `eoapi:` because eoapi is a subchart.
 eoapi:
   ######################
@@ -77,7 +86,14 @@ eoapi:
   stac:
     enabled: true
     ingress:
-      enabled: true
+      # Disabled on purpose. The upstream eoapi ingress applies a global
+      # `nginx.ingress.kubernetes.io/rewrite-target: /$2` to ALL paths, but the
+      # /stac path it emits for stac-auth-proxy has no capture group, so /stac/*
+      # rewrites to "/" — stripping the prefix the proxy needs (ROOT_PATH=/stac).
+      # This chart instead ships a dedicated passthrough Ingress for /stac
+      # (templates/passthrough-ingress.yaml). `path` is still consumed by the
+      # stac Deployment's --root-path, so it stays defined here.
+      enabled: false
       path: "/stac"
     autoscaling:
       enabled: false
@@ -136,6 +152,15 @@ eoapi:
   ######################
   browser:
     enabled: true
+    # Disabled for the same reason as stac (see above): the custom stac-browser
+    # image is built with the /browser pathPrefix baked in and only serves under
+    # /browser/, but the upstream ingress rewrite-target: /$2 strips that prefix
+    # (404). /browser is routed via the dedicated passthrough Ingress instead
+    # (templates/passthrough-ingress.yaml). `path` stays defined (used by the
+    # browser's OIDC redirect_uri).
+    ingress:
+      enabled: false
+      path: "/browser"
     settings:
       resources: {}
     # External URL (reached from the user's browser through the ingress).
@@ -189,6 +214,10 @@ eoapi:
     env:
       # Allow unauthenticated reads (workshop notebooks have no token).
       DEFAULT_PUBLIC: "true"
+      # Upstream STAC API the proxy fronts. REQUIRED on k8s: the proxy image
+      # defaults to http://localhost:8080 (docker-compose parity), but in-cluster
+      # STAC is a separate Service. Derived from the release-name contract `eoapi`.
+      UPSTREAM_URL: "http://eoapi-stac:8080"
       # External discovery URL — must match the token issuer (mock-oidc ISSUER,
       # reached by clients through the ingress). Depends on the ingress host.
       OIDC_DISCOVERY_URL: "http://localhost/mock-oidc/.well-known/openid-configuration"

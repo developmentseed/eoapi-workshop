@@ -72,6 +72,34 @@ above are installed and the ingress is reachable on `localhost`.
 
 ## Deploy
 
+### Recommended: `deploy.sh` (handles prerequisites + host + verify)
+
+For most clusters — especially remote ones — use the bundled script. It installs
+the prerequisites, **discovers the ingress host automatically**, generates the
+host overrides, installs the release, and verifies it end to end. It is
+idempotent (safe to re-run) and reproducible (re-creates everything on a fresh
+cluster):
+
+```bash
+cd infrastructure/charts/eoapi-workshop
+
+./deploy.sh deploy        # prerequisites + chart + verify
+./deploy.sh verify        # re-run the endpoint/auth checks
+./deploy.sh teardown      # remove the release (add --all to also remove operators)
+```
+
+The host is resolved in this order: `INGRESS_HOST` env var → the ingress
+LoadBalancer IP as `<IP>.nip.io` → a LoadBalancer hostname. Pin it explicitly for
+a custom domain or a local cluster:
+
+```bash
+INGRESS_HOST=eoapi.example.com ./deploy.sh deploy   # custom DNS
+INGRESS_HOST=localhost ./deploy.sh deploy           # kind/minikube/k3s
+SKIP_PREREQS=1 ./deploy.sh deploy                    # operators already installed
+```
+
+### Manual
+
 ```bash
 # From the repo root.
 
@@ -84,6 +112,7 @@ helm lint ./charts/eoapi-workshop
 helm template eoapi ./charts/eoapi-workshop -n eoapi | less
 
 # 3. Install — release name and namespace MUST be `eoapi` (see contract above).
+#    On a remote cluster, also pass the host overrides (see "Remote clusters").
 helm install eoapi ./charts/eoapi-workshop -n eoapi --create-namespace
 
 # 4. Watch the rollout.
@@ -93,6 +122,72 @@ kubectl -n eoapi get pods -w
 The pgstac database is created asynchronously by the operator and the
 `pgstacBootstrap` job seeds sample STAC data, so the API pods may restart a few
 times before they become `Ready` — this is expected on first install.
+
+### Remote clusters (non-`localhost` host)
+
+The default `values.yaml` is pinned to `localhost` (the docker-compose workflow).
+On a remote cluster the NGINX ingress is exposed via a LoadBalancer with its own
+IP/hostname, so the ingress host **and** the externally-reachable auth URLs must
+point at that host instead. Kubernetes `Ingress` rejects a bare IP as a host, so
+use a DNS name — [`nip.io`](https://nip.io) wildcard DNS (`<LB-IP>.nip.io`) works
+out of the box.
+
+Keep `values.yaml` environment-agnostic — pass the host in a **separate overrides
+file** (`-f`) rather than editing the chart. An overrides file is more robust than
+`--set` here because `mockOidcServer.extraEnv` is a YAML *list*: `--set` on a
+single list index silently replaces the whole element (dropping `ISSUER`/`SCOPES`),
+and the comma in `stac:read,stac:write` trips `--set` parsing. (`stac-auth-proxy.env`
+is a *map* and deep-merges fine.) The **internal** OIDC URL stays in-cluster and is
+left untouched.
+
+```bash
+# Discover the LoadBalancer IP the ingress controller was assigned.
+INGRESS_HOST="$(kubectl -n ingress-nginx get svc ingress-nginx-controller \
+  -o jsonpath='{.status.loadBalancer.ingress[0].ip}').nip.io"
+
+# Generate an overrides file for this host (kept out of the chart).
+cat > eoapi-remote.yaml <<EOF
+eoapi:
+  ingress:
+    host: "${INGRESS_HOST}"
+  stac-auth-proxy:
+    env:
+      OIDC_DISCOVERY_URL: "http://${INGRESS_HOST}/mock-oidc/.well-known/openid-configuration"
+  browser:
+    oidcDiscoveryUrl: "http://${INGRESS_HOST}/mock-oidc/.well-known/openid-configuration"
+  testing:
+    mockOidcServer:
+      extraEnv:
+        - name: ISSUER
+          value: "http://${INGRESS_HOST}/mock-oidc"
+        - name: SCOPES
+          value: "stac:read,stac:write"
+EOF
+
+helm install eoapi ./charts/eoapi-workshop -n eoapi --create-namespace -f eoapi-remote.yaml
+```
+
+Then substitute `$INGRESS_HOST` for `localhost` in all the `curl` commands below.
+
+### Ingress routing (why two Ingress objects)
+
+The upstream eoapi ingress exposes every service through a single NGINX `Ingress`
+with a cluster-wide `nginx.ingress.kubernetes.io/rewrite-target: /$2` annotation.
+That correctly strips the prefix for services that serve at root (`raster`,
+`vector`), but it **breaks** two services that must keep their prefix:
+
+- `stac-auth-proxy` runs with `ROOT_PATH=/stac` and serves under `/stac`.
+- the custom `stac-browser` image is built with the `/browser` pathPrefix baked
+  in and only serves under `/browser/`.
+
+A single ingress-wide rewrite can't satisfy both, so this chart sets
+`eoapi.stac.ingress.enabled=false` and `eoapi.browser.ingress.enabled=false`
+(removing their broken, rewritten paths from the upstream ingress) and ships a
+**second, dedicated passthrough `Ingress`** — `templates/passthrough-ingress.yaml`
+— that routes `/stac` and `/browser` with no rewrite. It also sets the required
+`stac-auth-proxy.env.UPSTREAM_URL=http://eoapi-stac:8080` (the upstream chart
+leaves it at the image default `http://localhost:8080`, which can't reach the
+separate STAC Service in-cluster).
 
 ## Verify
 
@@ -106,7 +201,7 @@ curl -s http://localhost/raster/healthz       # Raster (titiler)
 curl -s http://localhost/vector/healthz       # Vector (tipg)
 curl -s http://localhost/stac/collections     # sample collections loaded by pgstacBootstrap
 # STAC Browser + mock OIDC are served at:
-#   http://localhost/         (browser)
+#   http://localhost/browser/ (browser — note the /browser prefix)
 #   http://localhost/mock-oidc/.well-known/openid-configuration
 ```
 
