@@ -92,7 +92,7 @@ This will start up 6 services:
 - stac-fastapi-pgstac: STAC API available on port 8081
 - titiler-pgstac: dynamic tiler available on port 8082
 - tipg: vector feature/tile server available on port 8083
-- stac-browser: beautiful interface for browsing a STAC API available on port 8085
+- stac-browser: beautiful interface for browsing a STAC API available on port 8080
 - Jupyter Hub: interactive compute environment where you can browse the tutorial materials interactively, available on port 8888
 
 4. Open the Jupyter Hub in your web browser at `http://localhost:8888` and go through the tutorials in the `/docs` folder!
