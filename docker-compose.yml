@@ -56,7 +56,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 120s
 
 
   stac-fastapi:
@@ -80,9 +80,6 @@ services:
         condition: service_healthy
     command:
       bash -c "uvicorn stac_fastapi.pgstac.app:app --host 0.0.0.0 --port 8081"
-    volumes:
-      - ./dockerfiles/scripts:/tmp/scripts
-
   titiler-pgstac:
     platform: linux/amd64
     image: ghcr.io/stac-utils/titiler-pgstac:1.9.0
@@ -150,7 +147,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      SB_catalogUrl: "http://0.0.0.0:8081"
+      SB_catalogUrl: "http://localhost:8081"
     depends_on:
       - stac-fastapi
       - database
