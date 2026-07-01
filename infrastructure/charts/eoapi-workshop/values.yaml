@@ -321,9 +321,9 @@ jupyter:
   image:
     repository: ghcr.io/developmentseed/eoapi-workshop
     tag: "latest"
-    pullPolicy: IfNotPresent
+    pullPolicy: Always          # :latest updates (new notebooks) are picked up on restart
   storage:
-    size: "2Gi"                 # per-participant PVC mounted at /home/jovyan
+    size: "2Gi"                 # per-participant PVC mounted at /home/jovyan/work
   resources:
     requests: { cpu: "250m", memory: "1Gi" }
     limits: { cpu: "2", memory: "4Gi" }

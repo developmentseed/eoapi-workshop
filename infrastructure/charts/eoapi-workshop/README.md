@@ -140,10 +140,19 @@ participant Lab URLs.
 `jupyter.participants` (default `lab-01`…`lab-05`) → one Deployment + Service +
 RWO PVC each, at `<name>.<baseDomain>`. Each pod runs the GHCR workshop image
 (`ghcr.io/developmentseed/eoapi-workshop`, published by
-`.github/workflows/publish-workshop-image.yml`), gets the eoAPI endpoints + DB
-creds injected (from the `eoapi-pguser-eoapi` PGO secret, direct-primary keys),
-and a per-participant access token. Home dirs persist (a seed initContainer copies
-the baked notebooks into the PVC once, so the volume doesn't shadow them).
+`.github/workflows/publish-workshop-image.yml`, `imagePullPolicy: Always`), gets
+the eoAPI endpoints + DB creds injected (from the `eoapi-pguser-eoapi` PGO secret,
+direct-primary keys), and a per-participant access token.
+
+**Persistence model:** the notebooks live in the image at `/home/jovyan/docs` and
+come **fresh on every start**, so image/notebook updates always appear. Only
+`/home/jovyan/work` is a persistent PVC. Trade-off: edits to the *provided*
+notebooks reset on a pod restart — participants should save work under `work/`.
+
+**Private image:** GHCR packages default to private, so the cluster needs pull
+access. Either make the package public, or create a pull secret and reference it:
+`kubectl -n eoapi create secret docker-registry ghcr-pull --docker-server=ghcr.io --docker-username=<user> --docker-password=<token>` then
+`kubectl -n eoapi patch serviceaccount default -p '{"imagePullSecrets":[{"name":"ghcr-pull"}]}'`.
 
 ```bash
 ./deploy.sh urls

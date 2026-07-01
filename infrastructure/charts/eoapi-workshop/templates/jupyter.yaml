@@ -61,21 +61,11 @@ spec:
         app: {{ $root.Release.Name }}-{{ $name }}
     spec:
       securityContext:
-        fsGroup: 1000          # jovyan GID — makes the PVC writable by the notebook user
-      # Seed the PVC-backed home from the image ONCE. Mounting the (initially
-      # empty) PVC at /home/jovyan would otherwise shadow the baked-in notebooks;
-      # the .seeded marker keeps a later restart from clobbering a participant's work.
-      initContainers:
-        - name: seed-home
-          image: "{{ $j.image.repository }}:{{ $j.image.tag }}"
-          imagePullPolicy: {{ $j.image.pullPolicy }}
-          # cp -R (not -a): the PVC mount root is owned by root, so -a's attribute
-          # preservation on it fails with "Operation not permitted". -R copies the
-          # contents (owned by the runtime user) without touching the mount root.
-          command: ["bash", "-c", "test -e /mnt/home/.seeded || { cp -R /home/jovyan/. /mnt/home/ && touch /mnt/home/.seeded; }"]
-          volumeMounts:
-            - name: home
-              mountPath: /mnt/home
+        fsGroup: 1000          # jovyan GID — makes the work PVC writable by the notebook user
+      # Notebooks live in the image at /home/jovyan/docs and come FRESH on every
+      # start, so image/notebook updates always appear. Only /home/jovyan/work is
+      # a persistent PVC — no seed initContainer, no home shadowing. (Trade-off:
+      # edits to the provided notebooks reset on pod restart; save work under work/.)
       containers:
         - name: jupyterlab
           image: "{{ $j.image.repository }}:{{ $j.image.tag }}"
@@ -116,8 +106,8 @@ spec:
             - name: PGPASSWORD
               valueFrom: { secretKeyRef: { name: {{ $root.Release.Name }}-pguser-eoapi, key: password } }
           volumeMounts:
-            - name: home
-              mountPath: /home/jovyan
+            - name: work
+              mountPath: /home/jovyan/work
           # JupyterLab has no unauthenticated HTTP health endpoint → probe TCP.
           # Generous startupProbe so the first (large) image pull doesn't trip liveness.
           startupProbe:
@@ -134,7 +124,7 @@ spec:
           resources:
             {{- toYaml $j.resources | nindent 12 }}
       volumes:
-        - name: home
+        - name: work
           persistentVolumeClaim:
             claimName: {{ $root.Release.Name }}-{{ $name }}
 {{- end }}
