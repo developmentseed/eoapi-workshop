@@ -92,6 +92,13 @@ spec:
             - { name: TIPG_API_ENDPOINT,           value: "http://{{ $root.Release.Name }}-vector:8080" }
             - { name: MOCK_OIDC_ENDPOINT,          value: "http://{{ $root.Release.Name }}-mock-oidc-server:8080" }
             - { name: STAC_BROWSER_ENDPOINT,       value: "http://browser.{{ $base }}" }
+            # Browser-facing API URLs (external subdomains) — the notebooks' IFrame/
+            # viewer cells hand these to the user's browser, which cannot reach the
+            # in-cluster Service DNS above. Server-side httpx calls keep the *_ENDPOINT
+            # vars; absent these (compose/2i2c) the notebooks fall back to .replace().
+            - { name: STAC_API_BROWSER_URL,        value: "http://stac.{{ $base }}" }
+            - { name: TITILER_BROWSER_URL,         value: "http://raster.{{ $base }}" }
+            - { name: TIPG_BROWSER_URL,            value: "http://vector.{{ $base }}" }
             # DB creds from the PGO-generated secret, using the DIRECT primary keys
             # (host/port) — NOT pgbouncer-*, whose transaction pooling breaks the
             # DDL/COPY in 02-database.ipynb. Secret name is release-derived
