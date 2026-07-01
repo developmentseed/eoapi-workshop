@@ -20,6 +20,9 @@
 #   NAMESPACE     target namespace    (default: eoapi)   -- see OIDC contract below
 #   BASE_DOMAIN   wildcard base domain (default: eoapi-workshop.ds.io)
 #   SKIP_PREREQS=1  skip the ingress-nginx + PGO install
+#   GHCR_TOKEN     token with read:packages → create an imagePullSecret so the
+#                  cluster can pull a PRIVATE workshop image (with GHCR_USER).
+#                  Omit if the GHCR package is public.
 #
 # !!! OIDC CONTRACT !!! The proxy's OIDC_DISCOVERY_INTERNAL_URL is pinned to the
 # Service DNS name eoapi-mock-oidc-server.eoapi.svc.cluster.local, derived from
@@ -104,12 +107,37 @@ write_overrides() {
   mv "$tmp" "$OVERRIDES"
 }
 
+# Optional: let the cluster pull a PRIVATE workshop image. Set GHCR_TOKEN (a
+# token with read:packages) + GHCR_USER to create an imagePullSecret and attach
+# it to the namespace's default ServiceAccount (which the Labs use). Must run
+# BEFORE the Lab pods are created so the secret is injected at creation time.
+# Not needed if the GHCR package is public.
+setup_pull_secret() {
+  if [[ -z "${GHCR_TOKEN:-}" ]]; then
+    log "No GHCR_TOKEN set — assuming the workshop image is public (skipping pull secret)"
+    return
+  fi
+  log "Creating GHCR pull secret + attaching it to the default ServiceAccount"
+  kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  kubectl -n "$NAMESPACE" create secret docker-registry ghcr-pull \
+    --docker-server=ghcr.io --docker-username="${GHCR_USER:-$USER}" --docker-password="$GHCR_TOKEN" \
+    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  kubectl -n "$NAMESPACE" patch serviceaccount default \
+    -p '{"imagePullSecrets":[{"name":"ghcr-pull"}]}' >/dev/null
+}
+
 deploy_chart() {
   log "Building chart dependencies"
+  # Register the dependency repos so `helm dependency build` can resolve them
+  # from Chart.lock on a fresh machine (the vendored .tgz are gitignored).
+  helm repo add eoapi https://developmentseed.org/eoapi-k8s/ --force-update >/dev/null 2>&1 || true
+  helm repo add stac-manager https://stac-manager.ds.io/ --force-update >/dev/null 2>&1 || true
+  helm repo update eoapi stac-manager >/dev/null 2>&1 || true
   helm dependency build "$CHART_DIR" >/dev/null
   log "Writing host overrides for ${BASE_DOMAIN} (tokens preserved across re-deploys)"
   write_overrides
   echo "  overrides: ${OVERRIDES}"
+  setup_pull_secret          # before helm upgrade, so new Lab pods inherit the secret
   log "Deploying release '${RELEASE}' in namespace '${NAMESPACE}'"
   helm upgrade --install "$RELEASE" "$CHART_DIR" \
     -n "$NAMESPACE" --create-namespace -f "$OVERRIDES"

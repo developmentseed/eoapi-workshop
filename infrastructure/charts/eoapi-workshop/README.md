@@ -150,9 +150,14 @@ come **fresh on every start**, so image/notebook updates always appear. Only
 notebooks reset on a pod restart — participants should save work under `work/`.
 
 **Private image:** GHCR packages default to private, so the cluster needs pull
-access. Either make the package public, or create a pull secret and reference it:
-`kubectl -n eoapi create secret docker-registry ghcr-pull --docker-server=ghcr.io --docker-username=<user> --docker-password=<token>` then
-`kubectl -n eoapi patch serviceaccount default -p '{"imagePullSecrets":[{"name":"ghcr-pull"}]}'`.
+access. Two options:
+- **Make the package public** (simplest) — then nothing else is needed.
+- **Use a pull secret** — pass `GHCR_USER` + `GHCR_TOKEN` (a token with
+  `read:packages`) to `deploy.sh`; it creates the `ghcr-pull` secret and attaches
+  it to the namespace's default ServiceAccount before the Labs start:
+  ```bash
+  GHCR_USER=<user> GHCR_TOKEN=<token> ./deploy.sh deploy
+  ```
 
 ```bash
 ./deploy.sh urls

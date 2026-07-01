@@ -1,8 +1,9 @@
 {{/*
 Per-participant JupyterLab environments (one isolated Deployment+Service+PVC
-each) served at /lab/<name>. Routed by templates/passthrough-ingress.yaml (the
-prefix must be preserved to match --ServerApp.base_url). Endpoints + DB creds
-are injected to mirror the docker-compose `jupyterhub` service so the workshop
+each), served at the ROOT of <name>.<routing.baseDomain> and routed by
+templates/subdomain-ingress.yaml (no path prefix, no base_url). Notebooks come
+from the image; only /home/jovyan/work is persisted. Endpoints + DB creds are
+injected to mirror the docker-compose `jupyterhub` service so the workshop
 notebooks run unchanged.
 */}}
 {{- if .Values.jupyter.enabled }}
