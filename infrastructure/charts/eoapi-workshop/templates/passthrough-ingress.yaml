@@ -35,6 +35,12 @@ so this stays in sync with the rest of the deployment and hardcodes nothing.
     {{- $paths = append $paths (dict "path" (printf "/lab/%s" .name) "service" (printf "%s-%s" $.Release.Name .name) "port" 8888) -}}
   {{- end -}}
 {{- end -}}
+{{/* stac-manager keeps its prefix too (built with PUBLIC_URL=/manager). Service
+     name is pinned by fullnameOverride; port 80 per stac-manager chart 1.0.3. */}}
+{{- $sm := index .Values "stac-manager" -}}
+{{- if and $sm $sm.enabled -}}
+  {{- $paths = append $paths (dict "path" "/manager" "service" "eoapi-stac-manager" "port" 80) -}}
+{{- end -}}
 {{- if and $eoapi.ingress.enabled $paths }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress

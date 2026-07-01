@@ -19,3 +19,9 @@ dependencies:
   - name: eoapi
     version: 0.13.1
     repository: https://developmentseed.org/eoapi-k8s/
+  # stac-manager: STAC collection/item editing UI (deployed the EOEPCA way —
+  # its published chart). Routed at /manager via the passthrough ingress.
+  - name: stac-manager
+    version: 1.0.3
+    repository: https://stac-manager.ds.io/
+    condition: stac-manager.enabled

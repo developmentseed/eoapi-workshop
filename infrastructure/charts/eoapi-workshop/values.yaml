@@ -320,3 +320,27 @@ jupyter:
     - { name: lab-03 }
     - { name: lab-04 }
     - { name: lab-05 }
+
+##################################################################
+# STAC-MANAGER  (subchart — STAC editing UI, EOEPCA-style)
+##################################################################
+# Served at /manager (routed by the passthrough ingress; the app's own ingress
+# is disabled). The host in the URLs below defaults to localhost and is
+# rewritten by deploy.sh at deploy time. OIDC is wired to the mock server so
+# editing works — NOTE: browser OIDC (PKCE) needs a secure context, so
+# login/editing works on localhost but requires TLS on a remote http host.
+stac-manager:
+  enabled: true
+  fullnameOverride: "eoapi-stac-manager"   # pin the Service name for the passthrough route
+  ingress:
+    enabled: false
+  publicUrl:   "http://localhost/manager"
+  stacApi:     "http://localhost/stac"
+  stacBrowser: "http://localhost/browser"
+  appTitle: "eoAPI Workshop STAC Manager"
+  oidc:
+    authority: "http://localhost/mock-oidc"
+    clientId:  "test-client"
+  resources:                               # the container BUILDS at startup — needs headroom
+    requests: { cpu: "500m", memory: "1Gi" }
+    limits: { cpu: "2", memory: "4Gi" }
