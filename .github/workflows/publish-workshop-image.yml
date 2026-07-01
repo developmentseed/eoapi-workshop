@@ -39,7 +39,7 @@ jobs:
           # Portable: resolves to ghcr.io/developmentseed/eoapi-workshop in this repo.
           images: ghcr.io/${{ github.repository_owner }}/eoapi-workshop
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=sha,format=long
             type=ref,event=branch
 
