@@ -69,7 +69,10 @@ spec:
         - name: seed-home
           image: "{{ $j.image.repository }}:{{ $j.image.tag }}"
           imagePullPolicy: {{ $j.image.pullPolicy }}
-          command: ["bash", "-c", "test -e /mnt/home/.seeded || { cp -a /home/jovyan/. /mnt/home/ && touch /mnt/home/.seeded; }"]
+          # cp -R (not -a): the PVC mount root is owned by root, so -a's attribute
+          # preservation on it fails with "Operation not permitted". -R copies the
+          # contents (owned by the runtime user) without touching the mount root.
+          command: ["bash", "-c", "test -e /mnt/home/.seeded || { cp -R /home/jovyan/. /mnt/home/ && touch /mnt/home/.seeded; }"]
           volumeMounts:
             - name: home
               mountPath: /mnt/home
