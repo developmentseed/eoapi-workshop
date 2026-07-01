@@ -61,6 +61,18 @@ check_has "$ALL" 'REACT_APP_OIDC_AUTHORITY'    "OIDC authority env wired"
 ALL_OFF="$(helm template "$REL" "$CHART_DIR" -n "$NS" --set 'stac-manager.enabled=false' 2>/dev/null)"
 check_absent "$ALL_OFF" 'name: eoapi-stac-manager' "stac-manager.enabled=false renders nothing"
 
+echo "== compose/chart version lockstep =="
+# The notebooks bake in service routes, which change between releases
+# (e.g. /map → /map.html in titiler-pgstac 3.x). Both environments must run the
+# SAME versions or the notebooks can only be correct in one of them. Assert the
+# rendered chart uses the exact image:tag pinned in docker-compose.yml.
+COMPOSE="${CHART_DIR}/../../../docker-compose.yml"
+for svc in titiler-pgstac tipg stac-fastapi-pgstac; do
+  img=$(grep -oE "image: \S*/${svc}:\S+" "$COMPOSE" | head -1 | awk '{print $2}')
+  check_has "$ALL" "$(sed 's/[.[]/\\&/g' <<<"$img")" "chart runs compose's ${img##*/}"
+done
+check_has "$ALL" 'TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS' "raster external-dataset endpoints enabled (notebook 04 §4.4)"
+
 echo "== auth wiring =="
 # The proxy fetches JWKS from OIDC_DISCOVERY_URL's origin, so it MUST be the
 # in-cluster URL — an external LB URL hairpins from the pod (401). If someone

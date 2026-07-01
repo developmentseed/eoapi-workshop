@@ -125,6 +125,8 @@ eoapi:
     settings:
       resources: {}
       envVars:
+        # Notebook 04 §4.4 uses /external/* (needs this flag, as in docker-compose)
+        TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS: "True"
         # GDAL performance settings
         GDAL_CACHEMAX: "200"
         GDAL_DISABLE_READDIR_ON_OPEN: "EMPTY_DIR"
