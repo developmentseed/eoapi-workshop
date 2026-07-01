@@ -229,12 +229,14 @@ eoapi:
       DEFAULT_PUBLIC: "true"
       # Upstream STAC API the proxy fronts (in-cluster Service; release=eoapi).
       UPSTREAM_URL: "http://eoapi-stac:8080"
-      # External discovery URL — must match the token issuer (mock-oidc ISSUER),
-      # i.e. the mock-oidc subdomain reachable by clients.
-      OIDC_DISCOVERY_URL: "http://mock-oidc.eoapi-workshop.ds.io/.well-known/openid-configuration"
-      # Internal discovery URL — the proxy fetches the OIDC config + JWKS from
-      # here, in-cluster (the external host above is not resolvable from a pod).
-      # Depends on release name `eoapi` + namespace `eoapi`.
+      # OIDC discovery — MUST be in-cluster reachable. stac-auth-proxy fetches the
+      # OIDC metadata from OIDC_DISCOVERY_URL and rewrites the jwks_uri to that
+      # same origin, so it fetches JWKS from here too; an external LB URL would
+      # hairpin from the pod and fail (PyJWKClientConnectionError → 401). The
+      # proxy does NOT validate the token issuer, so the mock's external ISSUER
+      # doesn't need to match this URL. Pinned to release/namespace `eoapi`.
+      OIDC_DISCOVERY_URL: "http://eoapi-mock-oidc-server.eoapi.svc.cluster.local:8080/.well-known/openid-configuration"
+      # Used only for the startup readiness wait (same in-cluster URL).
       OIDC_DISCOVERY_INTERNAL_URL: "http://eoapi-mock-oidc-server.eoapi.svc.cluster.local:8080/.well-known/openid-configuration"
     # Served at root now → health checks at /healthz.
     startupProbe:

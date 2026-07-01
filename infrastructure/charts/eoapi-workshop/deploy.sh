@@ -76,9 +76,9 @@ write_overrides() {
     echo "  browser:"
     echo "    catalogUrl: \"http://stac.${BASE_DOMAIN}\""
     echo "    oidcDiscoveryUrl: \"http://mock-oidc.${BASE_DOMAIN}/.well-known/openid-configuration\""
-    echo "  stac-auth-proxy:"
-    echo "    env:"
-    echo "      OIDC_DISCOVERY_URL: \"http://mock-oidc.${BASE_DOMAIN}/.well-known/openid-configuration\""
+    # NOTE: stac-auth-proxy OIDC_DISCOVERY_URL is intentionally NOT overridden —
+    # it must stay the in-cluster URL (the proxy fetches JWKS from that origin;
+    # an external LB URL hairpins and fails). It is domain-independent.
     echo "  testing:"
     echo "    mockOidcServer:"
     echo "      extraEnv:"                       # list: restate in full

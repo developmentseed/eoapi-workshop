@@ -58,6 +58,12 @@ check_has "$ALL" 'REACT_APP_OIDC_AUTHORITY'    "OIDC authority env wired"
 ALL_OFF="$(helm template "$REL" "$CHART_DIR" -n "$NS" --set 'stac-manager.enabled=false' 2>/dev/null)"
 check_absent "$ALL_OFF" 'name: eoapi-stac-manager' "stac-manager.enabled=false renders nothing"
 
+echo "== auth wiring =="
+# The proxy fetches JWKS from OIDC_DISCOVERY_URL's origin, so it MUST be the
+# in-cluster URL — an external LB URL hairpins from the pod (401). If someone
+# sets it external, this in-cluster value line disappears and the check fails.
+check_has "$ALL" 'value: "http://eoapi-mock-oidc-server\.eoapi\.svc\.cluster\.local:8080/\.well-known/openid-configuration"' "proxy OIDC_DISCOVERY_URL is in-cluster (JWKS reachable)"
+
 echo "== Subdomain ingress (templates/subdomain-ingress.yaml) =="
 I="$(show templates/subdomain-ingress.yaml)"
 check_count "$I" 'host: (stac|raster|vector|browser|manager|mock-oidc)\.eoapi-workshop\.ds\.io' 6 "6 core-service subdomains"
