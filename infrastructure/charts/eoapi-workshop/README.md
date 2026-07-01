@@ -15,7 +15,7 @@ domain (`*.<baseDomain>`, default `eoapi-workshop.ds.io`).
 |---|---|---|
 | STAC API (via stac-auth-proxy) | `stac.` | pgstac + stac-fastapi, fronted by the auth proxy |
 | Raster (titiler-pgstac) | `raster.` | |
-| Vector (tipg) | `vector.` | starts empty — see [Limitations](#limitations) |
+| Vector (tipg) | `vector.` | serves `features.ecoregions` (loaded by the features-loader Job) |
 | STAC Browser | `browser.` | root-serving `radiantearth/stac-browser` |
 | STAC Manager (editing UI) | `manager.` | `stac-manager` chart 1.0.3 |
 | Mock OIDC server | `mock-oidc.` | test-only auth |
@@ -138,11 +138,17 @@ helm uninstall eoapi -n eoapi         # or ./deploy.sh teardown
 kubectl -n eoapi delete pvc --all     # PVCs (DB + Lab work) are retained by design
 ```
 
-## Limitations
+## Notebook data
 
-- **`/vector` starts empty** — `pgstacBootstrap.loadSamples` loads STAC items, not
-  the compose `features-loader` vector layer, so the `05-tipg` notebook needs it
-  loaded separately (an `ogr2ogr` Job — follow-up).
+The workshop notebooks (`docs/00`–`06`) run in the Labs against this deployment:
+- `pgstacBootstrap.loadSamples` is **off** — the upstream sample collection
+  `noaa-emergency-response` is stored without a STAC `type` field and breaks
+  `pystac_client` (notebook 03). The notebooks create their own STAC data.
+- the **features-loader Job** (`featuresLoader.enabled`) loads the NA CEC Level III
+  Ecoregions into `features.ecoregions`, and tipg is configured with
+  `TIPG_DB_SCHEMAS=["features","public"]`, so notebook 05 has vector data.
+
+## Limitations
 - **UI login needs TLS** — STAC Manager / Browser OIDC login uses PKCE (needs
   HTTPS); over http they're read-only. Enable `routing.tls`. (Browser's
   `redirect_uri` also still derives from the apex host upstream.)

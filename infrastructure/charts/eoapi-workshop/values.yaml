@@ -80,11 +80,12 @@ eoapi:
   pgstacBootstrap:
     enabled: true
     settings:
-      # Loads STAC sample *items* so /stac has data out of the box.
-      # NOTE: this does NOT load the ecoregions vector layer that the
-      # docker-compose `features-loader` seeds for tipg — /vector starts
-      # empty. See README "Known limitations".
-      loadSamples: true
+      # loadSamples is OFF: the upstream sample collection `noaa-emergency-response`
+      # is stored without a STAC `type` field, which breaks pystac_client
+      # (`get_all_collections()` in notebook 03). The workshop notebooks create
+      # their own collections/items, and docker-compose ships no STAC sample
+      # loader either — so this matches compose.
+      loadSamples: false
       pgstacSettings:
         queue_timeout: "10 minutes"
         use_queue: "false"
@@ -150,6 +151,10 @@ eoapi:
       resources: {}
       envVars:
         TIPG_CATALOG_TTL: "300"
+        # Expose the `features` schema (holds ecoregions, loaded by the
+        # features-loader Job) so notebook 05 can query features.ecoregions —
+        # mirrors the docker-compose tipg `TIPG_DB_SCHEMAS`. `public` is kept too.
+        TIPG_DB_SCHEMAS: '["features", "public"]'
         HOST: "0.0.0.0"
         PORT: "8080"
         WEB_CONCURRENCY: "4"
@@ -358,3 +363,17 @@ stac-manager:
   resources:                               # the container BUILDS at startup — needs headroom
     requests: { cpu: "500m", memory: "1Gi" }
     limits: { cpu: "2", memory: "4Gi" }
+
+##################################################################
+# FEATURES LOADER  (top-level — this chart's own template)
+##################################################################
+# k8s equivalent of the docker-compose `features-loader`: a post-install/upgrade
+# Job that loads the NA CEC Level III Ecoregions shapefile into features.ecoregions
+# so notebook 05 (tipg) has data. Idempotent — skips if the table already exists.
+featuresLoader:
+  enabled: true
+  image: ghcr.io/osgeo/gdal:ubuntu-small-latest
+  shapefileUrl: "/vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp"
+  resources:
+    requests: { cpu: "200m", memory: "512Mi" }
+    limits: { cpu: "1", memory: "2Gi" }

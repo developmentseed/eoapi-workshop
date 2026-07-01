@@ -72,5 +72,14 @@ check_has   "$I" 'name: eoapi-stac-auth-proxy' "stac subdomain → auth-proxy ba
 check_has   "$I" 'name: eoapi-stac-manager'    "manager subdomain → stac-manager backend"
 check_absent "$I" 'rewrite-target'             "no path rewrite (root serving)"
 
+echo "== features loader + tipg schema =="
+FA="$(helm template "$REL" "$CHART_DIR" -n "$NS" 2>/dev/null)"
+check_has    "$FA" 'name: eoapi-features-loader'   "features-loader Job renders"
+check_has    "$FA" 'features\.ecoregions'          "loader targets features.ecoregions"
+check_has    "$FA" 'name: eoapi-pguser-postgres'   "loader uses the superuser secret"
+check_has    "$FA" 'TIPG_DB_SCHEMAS'               "tipg exposes the features schema"
+FA_OFF="$(helm template "$REL" "$CHART_DIR" -n "$NS" --set featuresLoader.enabled=false 2>/dev/null)"
+check_absent "$FA_OFF" 'name: eoapi-features-loader' "featuresLoader.enabled=false renders nothing"
+
 if [[ "$fail" == 0 ]]; then echo "ALL CHECKS PASSED"; else echo "SOME CHECKS FAILED"; fi
 exit "$fail"
