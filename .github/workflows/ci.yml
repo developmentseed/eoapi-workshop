@@ -17,3 +17,20 @@ jobs:
         run: uv run ruff check
       - name: Format
         run: uv run ruff format --check
+
+  helm:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+      - name: Register dependency repos
+        run: |
+          helm repo add eoapi https://developmentseed.org/eoapi-k8s/
+          helm repo add stac-manager https://stac-manager.ds.io/
+      - name: Build chart dependencies
+        run: helm dependency build infrastructure/charts/eoapi-workshop
+      - name: Lint
+        run: helm lint infrastructure/charts/eoapi-workshop
+      - name: Render checks
+        run: ./infrastructure/charts/eoapi-workshop/tests/render-checks.sh
