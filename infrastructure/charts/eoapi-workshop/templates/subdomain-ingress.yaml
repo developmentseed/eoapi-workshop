@@ -1,0 +1,69 @@
+{{/*
+Subdomain-per-service ingress. Each enabled service is exposed at
+<label>.<routing.baseDomain> and served at the ROOT of its own subdomain (no
+path rewrite). Requires a wildcard DNS record *.<baseDomain> pointing at the
+ingress LoadBalancer. Replaces the upstream path-based eoapi ingress, which is
+disabled in values (eoapi.ingress.enabled=false).
+*/}}
+{{- $eoapi := .Values.eoapi -}}
+{{- $base := .Values.routing.baseDomain -}}
+{{- $sap := index $eoapi "stac-auth-proxy" -}}
+{{- $sm := index .Values "stac-manager" -}}
+{{- $rules := list -}}
+{{- if and $eoapi.stac.enabled $sap $sap.enabled -}}
+  {{- $rules = append $rules (dict "sub" "stac" "service" (printf "%s-stac-auth-proxy" .Release.Name) "port" 8080) -}}
+{{- end -}}
+{{- if $eoapi.raster.enabled -}}
+  {{- $rules = append $rules (dict "sub" "raster" "service" (printf "%s-raster" .Release.Name) "port" 8080) -}}
+{{- end -}}
+{{- if $eoapi.vector.enabled -}}
+  {{- $rules = append $rules (dict "sub" "vector" "service" (printf "%s-vector" .Release.Name) "port" 8080) -}}
+{{- end -}}
+{{- if and $eoapi.browser $eoapi.browser.enabled -}}
+  {{- $rules = append $rules (dict "sub" "browser" "service" (printf "%s-browser" .Release.Name) "port" (int ($eoapi.browser.service.port | default 8080))) -}}
+{{- end -}}
+{{- if and $eoapi.testing $eoapi.testing.mockOidcServer $eoapi.testing.mockOidcServer.enabled -}}
+  {{- $mport := int ($eoapi.testing.mockOidcServer.service.port | default 8080) -}}
+  {{- $rules = append $rules (dict "sub" "mock-oidc" "service" (printf "%s-mock-oidc-server" .Release.Name) "port" $mport) -}}
+{{- end -}}
+{{- if and $sm $sm.enabled -}}
+  {{- $rules = append $rules (dict "sub" "manager" "service" "eoapi-stac-manager" "port" 80) -}}
+{{- end -}}
+{{- if and .Values.jupyter .Values.jupyter.enabled -}}
+  {{- range .Values.jupyter.participants -}}
+    {{- $rules = append $rules (dict "sub" .name "service" (printf "%s-%s" $.Release.Name .name) "port" 8888) -}}
+  {{- end -}}
+{{- end -}}
+{{- if $rules }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-subdomain-ingress
+  labels:
+    app: {{ .Release.Name }}-subdomain-ingress
+spec:
+  {{- if .Values.routing.className }}
+  ingressClassName: {{ .Values.routing.className }}
+  {{- end }}
+  rules:
+    {{- range $rules }}
+    - host: {{ printf "%s.%s" .sub $base }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .service }}
+                port:
+                  number: {{ .port }}
+    {{- end }}
+  {{- if .Values.routing.tls.enabled }}
+  tls:
+    - hosts:
+        {{- range $rules }}
+        - {{ printf "%s.%s" .sub $base }}
+        {{- end }}
+      secretName: {{ .Values.routing.tls.secretName }}
+  {{- end }}
+{{- end }}

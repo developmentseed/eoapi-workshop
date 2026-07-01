@@ -8,7 +8,7 @@ notebooks run unchanged.
 {{- if .Values.jupyter.enabled }}
 {{- $root := . }}
 {{- $j := .Values.jupyter }}
-{{- $host := .Values.eoapi.ingress.host | default "localhost" }}
+{{- $base := .Values.routing.baseDomain }}
 {{- range $j.participants }}
 {{- $name := .name }}
 {{- $token := .token | default "" }}
@@ -79,10 +79,10 @@ spec:
           imagePullPolicy: {{ $j.image.pullPolicy }}
           # args only (NO command): keep the image ENTRYPOINT (/entrypoint.sh
           # activates the conda env) and just override the launch command.
+          # Served at the root of <name>.<baseDomain> — no base_url prefix.
           args:
             - jupyter
             - lab
-            - --ServerApp.base_url=/lab/{{ $name }}
             - --ServerApp.token={{ $token }}
             - --ip=0.0.0.0
             - --port=8888
@@ -97,7 +97,7 @@ spec:
             - { name: TITILER_PGSTAC_API_ENDPOINT, value: "http://{{ $root.Release.Name }}-raster:8080" }
             - { name: TIPG_API_ENDPOINT,           value: "http://{{ $root.Release.Name }}-vector:8080" }
             - { name: MOCK_OIDC_ENDPOINT,          value: "http://{{ $root.Release.Name }}-mock-oidc-server:8080" }
-            - { name: STAC_BROWSER_ENDPOINT,       value: "http://{{ $host }}/browser" }
+            - { name: STAC_BROWSER_ENDPOINT,       value: "http://browser.{{ $base }}" }
             # DB creds from the PGO-generated secret, using the DIRECT primary keys
             # (host/port) — NOT pgbouncer-*, whose transaction pooling breaks the
             # DDL/COPY in 02-database.ipynb. Secret name is release-derived

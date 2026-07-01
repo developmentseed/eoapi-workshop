@@ -16,15 +16,26 @@
 # Using any other release name or namespace breaks stac-auth-proxy's OIDC
 # discovery. See README.md.
 #
-# !!! HOST IS A DEPLOY-TIME INPUT !!!
-# The externally-reachable host appears in four places below (ingress.host plus
-# three auth URLs) and defaults to `localhost` — a LOCAL-ONLY fallback for kind/
-# minikube/k3s, matching the docker-compose workflow. On a remote cluster you do
-# NOT edit these: deploy with `./deploy.sh` (or set INGRESS_HOST), which discovers
-# the ingress LoadBalancer host and overrides all four at install time. Keeping
-# the cluster-specific host out of this file is deliberate — it stays portable.
-# See README.md "Remote clusters".
-#
+# !!! SUBDOMAIN-PER-SERVICE ROUTING !!!
+# Every service is exposed at <label>.<baseDomain> (see `routing` below), served
+# at the root of its own subdomain — NOT under a path. This requires a wildcard
+# DNS record `*.<baseDomain>` pointing at the ingress LoadBalancer. The upstream
+# eoapi path-based ingress is disabled; templates/subdomain-ingress.yaml owns all
+# routing. The many subdomain URLs below default to the workshop domain; override
+# them for a different domain with `./deploy.sh` (BASE_DOMAIN=...).
+
+##################################################################
+# ROUTING  (top-level — this chart's own subdomain ingress)
+##################################################################
+routing:
+  # Wildcard base domain. Each service is served at <label>.<baseDomain>:
+  #   stac. raster. vector. browser. manager. mock-oidc. lab-01..NN.
+  baseDomain: "eoapi-workshop.ds.io"
+  className: "nginx"
+  tls:
+    enabled: false
+    secretName: "eoapi-workshop-tls"
+
 # All values are nested under `eoapi:` because eoapi is a subchart.
 eoapi:
   ######################
@@ -86,15 +97,11 @@ eoapi:
   stac:
     enabled: true
     ingress:
-      # Disabled on purpose. The upstream eoapi ingress applies a global
-      # `nginx.ingress.kubernetes.io/rewrite-target: /$2` to ALL paths, but the
-      # /stac path it emits for stac-auth-proxy has no capture group, so /stac/*
-      # rewrites to "/" — stripping the prefix the proxy needs (ROOT_PATH=/stac).
-      # This chart instead ships a dedicated passthrough Ingress for /stac
-      # (templates/passthrough-ingress.yaml). `path` is still consumed by the
-      # stac Deployment's --root-path, so it stays defined here.
+      # Routing is subdomain-based (templates/subdomain-ingress.yaml), so the
+      # eoapi ingress is off. `path: ""` makes the stac Deployment's
+      # --root-path empty → served at the root of stac.<baseDomain>.
       enabled: false
-      path: "/stac"
+      path: ""
     autoscaling:
       enabled: false
     settings:
@@ -110,8 +117,8 @@ eoapi:
   raster:
     enabled: true
     ingress:
-      enabled: true
-      path: "/raster"
+      enabled: false          # routed at raster.<baseDomain>; path "" → root-path empty
+      path: ""
     autoscaling:
       enabled: false
     settings:
@@ -135,8 +142,8 @@ eoapi:
   vector:
     enabled: true
     ingress:
-      enabled: true
-      path: "/vector"
+      enabled: false          # routed at vector.<baseDomain>; path "" → root-path empty
+      path: ""
     autoscaling:
       enabled: false
     settings:
@@ -152,19 +159,20 @@ eoapi:
   ######################
   browser:
     enabled: true
-    # Disabled for the same reason as stac (see above): the custom stac-browser
-    # image is built with the /browser pathPrefix baked in and only serves under
-    # /browser/, but the upstream ingress rewrite-target: /$2 strips that prefix
-    # (404). /browser is routed via the dedicated passthrough Ingress instead
-    # (templates/passthrough-ingress.yaml). `path` stays defined (used by the
-    # browser's OIDC redirect_uri).
+    # The upstream custom image bakes a /browser pathPrefix, which breaks when
+    # served at a subdomain root. Use the vanilla root-serving radiantearth image
+    # (same as docker-compose) and point it at the stac subdomain.
+    image:
+      name: ghcr.io/radiantearth/stac-browser
+      tag: latest
     ingress:
-      enabled: false
-      path: "/browser"
+      enabled: false          # routed at browser.<baseDomain> (root)
+      path: "/"
     settings:
       resources: {}
-    # External URL (reached from the user's browser through the ingress).
-    oidcDiscoveryUrl: "http://localhost/mock-oidc/.well-known/openid-configuration"
+    # Where the browser fetches the catalog from (the stac subdomain).
+    catalogUrl: "http://stac.eoapi-workshop.ds.io"
+    oidcDiscoveryUrl: "http://mock-oidc.eoapi-workshop.ds.io/.well-known/openid-configuration"
 
   ######################
   # DISABLED COMPONENTS
@@ -193,54 +201,57 @@ eoapi:
   ######################
   # INGRESS
   ######################
+  # The upstream path-based ingress is OFF — all routing is subdomain-based via
+  # templates/subdomain-ingress.yaml (see top-level `routing`). `host` is kept
+  # only for any internal URL defaults the eoapi chart may still compute.
   ingress:
-    enabled: true
+    enabled: false
     className: "nginx"
     pathType: "Prefix"
-    host: "localhost"
+    host: "eoapi-workshop.ds.io"
     tls:
       enabled: false
 
   ######################
   # AUTH (docker-compose parity)
   ######################
-  # TEST-ONLY auth. stac-auth-proxy fronts /stac; the mock OIDC server below
-  # provides discovery. DEFAULT_PUBLIC keeps reads open so the workshop
-  # notebooks work without tokens. DO NOT use this setup in production.
+  # TEST-ONLY auth. stac-auth-proxy fronts STAC at stac.<baseDomain> (root).
+  # DEFAULT_PUBLIC keeps reads open so the workshop notebooks work without
+  # tokens. DO NOT use this setup in production.
   stac-auth-proxy:
     enabled: true
     image:
       tag: "v1.1.0"
     env:
+      # Served at the root of the stac subdomain (no path prefix).
+      ROOT_PATH: ""
       # Allow unauthenticated reads (workshop notebooks have no token).
       DEFAULT_PUBLIC: "true"
-      # Upstream STAC API the proxy fronts. REQUIRED on k8s: the proxy image
-      # defaults to http://localhost:8080 (docker-compose parity), but in-cluster
-      # STAC is a separate Service. Derived from the release-name contract `eoapi`.
+      # Upstream STAC API the proxy fronts (in-cluster Service; release=eoapi).
       UPSTREAM_URL: "http://eoapi-stac:8080"
-      # External discovery URL — must match the token issuer (mock-oidc ISSUER,
-      # reached by clients through the ingress). Depends on the ingress host.
-      OIDC_DISCOVERY_URL: "http://localhost/mock-oidc/.well-known/openid-configuration"
+      # External discovery URL — must match the token issuer (mock-oidc ISSUER),
+      # i.e. the mock-oidc subdomain reachable by clients.
+      OIDC_DISCOVERY_URL: "http://mock-oidc.eoapi-workshop.ds.io/.well-known/openid-configuration"
       # Internal discovery URL — the proxy fetches the OIDC config + JWKS from
       # here, in-cluster (the external host above is not resolvable from a pod).
       # Depends on release name `eoapi` + namespace `eoapi`.
       OIDC_DISCOVERY_INTERNAL_URL: "http://eoapi-mock-oidc-server.eoapi.svc.cluster.local:8080/.well-known/openid-configuration"
-    # Health-check paths include the /stac ROOT_PATH the proxy serves under.
+    # Served at root now → health checks at /healthz.
     startupProbe:
       httpGet:
-        path: /stac/healthz
+        path: /healthz
         port: http
       periodSeconds: 2
       failureThreshold: 30
     livenessProbe:
       httpGet:
-        path: /stac/healthz
+        path: /healthz
         port: http
       periodSeconds: 60
       failureThreshold: 3
     readinessProbe:
       httpGet:
-        path: /stac/healthz
+        path: /healthz
         port: http
       periodSeconds: 5
       failureThreshold: 3
@@ -261,7 +272,7 @@ eoapi:
       clientSecret: "test-secret"
       extraEnv:
         - name: ISSUER
-          value: "http://localhost/mock-oidc"
+          value: "http://mock-oidc.eoapi-workshop.ds.io"
         # Extra scopes the server will issue (matches docker-compose), so you
         # can mint tokens with stac:write to exercise protected transactions.
         - name: SCOPES
@@ -270,8 +281,8 @@ eoapi:
         type: ClusterIP
         port: 8080
       ingress:
-        enabled: true
-        path: "/mock-oidc"
+        enabled: false        # routed at mock-oidc.<baseDomain> (root)
+        path: "/"
       resources:
         limits:
           cpu: 100m
@@ -297,12 +308,12 @@ eoapi:
 ##################################################################
 # WORKSHOP JUPYTERLABS  (top-level — this chart's own templates)
 ##################################################################
-# One isolated JupyterLab per participant at /lab/<name>, each with its own
-# PVC (persistent home) and access token. COUNT = length of `participants`
-# (default 5). Tokens are filled in by deploy.sh at deploy time and live only
-# in the gitignored .deploy/overrides.yaml — a direct `helm install` (without
-# deploy.sh) leaves tokens empty, i.e. the Labs are UNAUTHENTICATED. Use
-# deploy.sh for any real deployment.
+# One isolated JupyterLab per participant at <name>.<baseDomain> (served at
+# root), each with its own PVC (persistent home) and access token. COUNT =
+# length of `participants` (default 5). Tokens are filled in by deploy.sh at
+# deploy time and live only in the gitignored .deploy/overrides.yaml — a direct
+# `helm install` (without deploy.sh) leaves tokens empty, i.e. the Labs are
+# UNAUTHENTICATED. Use deploy.sh for any real deployment.
 jupyter:
   enabled: true
   image:
@@ -324,22 +335,21 @@ jupyter:
 ##################################################################
 # STAC-MANAGER  (subchart — STAC editing UI, EOEPCA-style)
 ##################################################################
-# Served at /manager (routed by the passthrough ingress; the app's own ingress
-# is disabled). The host in the URLs below defaults to localhost and is
-# rewritten by deploy.sh at deploy time. OIDC is wired to the mock server so
-# editing works — NOTE: browser OIDC (PKCE) needs a secure context, so
-# login/editing works on localhost but requires TLS on a remote http host.
+# Served at manager.<baseDomain> (root; routed by subdomain-ingress, the app's
+# own ingress is disabled). OIDC is wired to the mock server so editing works —
+# NOTE: browser OIDC (PKCE) needs a secure context, so login/editing requires
+# TLS (https). Over plain http the UI loads and browses read-only.
 stac-manager:
   enabled: true
-  fullnameOverride: "eoapi-stac-manager"   # pin the Service name for the passthrough route
+  fullnameOverride: "eoapi-stac-manager"   # pin the Service name for the subdomain route
   ingress:
     enabled: false
-  publicUrl:   "http://localhost/manager"
-  stacApi:     "http://localhost/stac"
-  stacBrowser: "http://localhost/browser"
+  publicUrl:   "http://manager.eoapi-workshop.ds.io"
+  stacApi:     "http://stac.eoapi-workshop.ds.io"
+  stacBrowser: "http://browser.eoapi-workshop.ds.io"
   appTitle: "eoAPI Workshop STAC Manager"
   oidc:
-    authority: "http://localhost/mock-oidc"
+    authority: "http://mock-oidc.eoapi-workshop.ds.io"
     clientId:  "test-client"
   resources:                               # the container BUILDS at startup — needs headroom
     requests: { cpu: "500m", memory: "1Gi" }
