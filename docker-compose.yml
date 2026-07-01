@@ -177,6 +177,22 @@ services:
       - stac-auth-proxy
       - database
 
+  stac-manager:
+    image: ghcr.io/developmentseed/stac-manager:1.0.3
+    ports:
+      - 8086:8080
+    environment:
+      - PUBLIC_URL=http://localhost:8086
+      - REACT_APP_STAC_API=http://localhost:8084
+      - REACT_APP_STAC_BROWSER=http://localhost:8080
+      - REACT_APP_OIDC_AUTHORITY=http://localhost:8085
+      - REACT_APP_OIDC_CLIENT_ID=stac-manager
+      - APP_TITLE=STAC Manager
+      - APP_DESCRIPTION=Manage STAC collections and items in the eoAPI workshop stack
+    depends_on:
+      - stac-auth-proxy
+      - mock-oidc
+
   jupyterhub:
     build:
       context: .
@@ -197,6 +213,7 @@ services:
       - TITILER_PGSTAC_API_ENDPOINT=http://titiler-pgstac:8082
       - TIPG_API_ENDPOINT=http://tipg:8083
       - STAC_BROWSER_ENDPOINT=http://localhost:8080
+      - STAC_MANAGER_ENDPOINT=http://localhost:8086
 
 volumes:
   pgdata:
