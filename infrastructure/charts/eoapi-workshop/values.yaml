@@ -293,3 +293,30 @@ eoapi:
     enabled: true
     connectionPooling:
       enabled: false
+
+##################################################################
+# WORKSHOP JUPYTERLABS  (top-level — this chart's own templates)
+##################################################################
+# One isolated JupyterLab per participant at /lab/<name>, each with its own
+# PVC (persistent home) and access token. COUNT = length of `participants`
+# (default 5). Tokens are filled in by deploy.sh at deploy time and live only
+# in the gitignored .deploy/overrides.yaml — a direct `helm install` (without
+# deploy.sh) leaves tokens empty, i.e. the Labs are UNAUTHENTICATED. Use
+# deploy.sh for any real deployment.
+jupyter:
+  enabled: true
+  image:
+    repository: ghcr.io/developmentseed/eoapi-workshop
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  storage:
+    size: "2Gi"                 # per-participant PVC mounted at /home/jovyan
+  resources:
+    requests: { cpu: "250m", memory: "1Gi" }
+    limits: { cpu: "2", memory: "4Gi" }
+  participants:                 # COUNT = length of this list; tokens set by deploy.sh
+    - { name: lab-01 }
+    - { name: lab-02 }
+    - { name: lab-03 }
+    - { name: lab-04 }
+    - { name: lab-05 }

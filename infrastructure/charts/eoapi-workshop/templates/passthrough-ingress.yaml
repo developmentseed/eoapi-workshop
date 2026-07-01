@@ -29,6 +29,12 @@ so this stays in sync with the rest of the deployment and hardcodes nothing.
   {{- $bport := $eoapi.browser.service.port | default 8080 -}}
   {{- $paths = append $paths (dict "path" ($eoapi.browser.ingress.path | default "/browser") "service" (printf "%s-browser" .Release.Name) "port" $bport) -}}
 {{- end -}}
+{{/* Per-participant JupyterLabs also keep their prefix (--ServerApp.base_url=/lab/<name>). */}}
+{{- if and .Values.jupyter .Values.jupyter.enabled -}}
+  {{- range .Values.jupyter.participants -}}
+    {{- $paths = append $paths (dict "path" (printf "/lab/%s" .name) "service" (printf "%s-%s" $.Release.Name .name) "port" 8888) -}}
+  {{- end -}}
+{{- end -}}
 {{- if and $eoapi.ingress.enabled $paths }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress

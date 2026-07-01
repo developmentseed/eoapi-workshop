@@ -1,0 +1,138 @@
+{{/*
+Per-participant JupyterLab environments (one isolated Deployment+Service+PVC
+each) served at /lab/<name>. Routed by templates/passthrough-ingress.yaml (the
+prefix must be preserved to match --ServerApp.base_url). Endpoints + DB creds
+are injected to mirror the docker-compose `jupyterhub` service so the workshop
+notebooks run unchanged.
+*/}}
+{{- if .Values.jupyter.enabled }}
+{{- $root := . }}
+{{- $j := .Values.jupyter }}
+{{- $host := .Values.eoapi.ingress.host | default "localhost" }}
+{{- range $j.participants }}
+{{- $name := .name }}
+{{- $token := .token | default "" }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $root.Release.Name }}-{{ $name }}
+  labels:
+    app: {{ $root.Release.Name }}-{{ $name }}
+    app.kubernetes.io/component: workshop-jupyterlab
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ $j.storage.size | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $root.Release.Name }}-{{ $name }}
+  labels:
+    app: {{ $root.Release.Name }}-{{ $name }}
+    app.kubernetes.io/component: workshop-jupyterlab
+spec:
+  selector:
+    app: {{ $root.Release.Name }}-{{ $name }}
+  ports:
+    - name: http
+      port: 8888
+      targetPort: 8888
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $root.Release.Name }}-{{ $name }}
+  labels:
+    app: {{ $root.Release.Name }}-{{ $name }}
+    app.kubernetes.io/component: workshop-jupyterlab
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO PVC: the new pod can't mount until the old one releases it
+  selector:
+    matchLabels:
+      app: {{ $root.Release.Name }}-{{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $root.Release.Name }}-{{ $name }}
+    spec:
+      securityContext:
+        fsGroup: 1000          # jovyan GID — makes the PVC writable by the notebook user
+      # Seed the PVC-backed home from the image ONCE. Mounting the (initially
+      # empty) PVC at /home/jovyan would otherwise shadow the baked-in notebooks;
+      # the .seeded marker keeps a later restart from clobbering a participant's work.
+      initContainers:
+        - name: seed-home
+          image: "{{ $j.image.repository }}:{{ $j.image.tag }}"
+          imagePullPolicy: {{ $j.image.pullPolicy }}
+          command: ["bash", "-c", "test -e /mnt/home/.seeded || { cp -a /home/jovyan/. /mnt/home/ && touch /mnt/home/.seeded; }"]
+          volumeMounts:
+            - name: home
+              mountPath: /mnt/home
+      containers:
+        - name: jupyterlab
+          image: "{{ $j.image.repository }}:{{ $j.image.tag }}"
+          imagePullPolicy: {{ $j.image.pullPolicy }}
+          # args only (NO command): keep the image ENTRYPOINT (/entrypoint.sh
+          # activates the conda env) and just override the launch command.
+          args:
+            - jupyter
+            - lab
+            - --ServerApp.base_url=/lab/{{ $name }}
+            - --ServerApp.token={{ $token }}
+            - --ip=0.0.0.0
+            - --port=8888
+            - --no-browser
+          ports:
+            - name: http
+              containerPort: 8888
+          env:
+            # eoAPI endpoints (in-cluster) — mirrors the docker-compose jupyterhub service.
+            - { name: STAC_API_ENDPOINT,           value: "http://{{ $root.Release.Name }}-stac-auth-proxy:8080" }
+            - { name: STAC_AUTH_PROXY_ENDPOINT,    value: "http://{{ $root.Release.Name }}-stac-auth-proxy:8080" }
+            - { name: TITILER_PGSTAC_API_ENDPOINT, value: "http://{{ $root.Release.Name }}-raster:8080" }
+            - { name: TIPG_API_ENDPOINT,           value: "http://{{ $root.Release.Name }}-vector:8080" }
+            - { name: MOCK_OIDC_ENDPOINT,          value: "http://{{ $root.Release.Name }}-mock-oidc-server:8080" }
+            - { name: STAC_BROWSER_ENDPOINT,       value: "http://{{ $host }}/browser" }
+            # DB creds from the PGO-generated secret, using the DIRECT primary keys
+            # (host/port) — NOT pgbouncer-*, whose transaction pooling breaks the
+            # DDL/COPY in 02-database.ipynb. Secret name is release-derived
+            # (release/namespace contract: both must be "eoapi").
+            - name: PGHOST
+              valueFrom: { secretKeyRef: { name: {{ $root.Release.Name }}-pguser-eoapi, key: host } }
+            - name: PGPORT
+              valueFrom: { secretKeyRef: { name: {{ $root.Release.Name }}-pguser-eoapi, key: port } }
+            - name: PGDATABASE
+              valueFrom: { secretKeyRef: { name: {{ $root.Release.Name }}-pguser-eoapi, key: dbname } }
+            - name: PGUSER
+              valueFrom: { secretKeyRef: { name: {{ $root.Release.Name }}-pguser-eoapi, key: user } }
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: {{ $root.Release.Name }}-pguser-eoapi, key: password } }
+          volumeMounts:
+            - name: home
+              mountPath: /home/jovyan
+          # JupyterLab has no unauthenticated HTTP health endpoint → probe TCP.
+          # Generous startupProbe so the first (large) image pull doesn't trip liveness.
+          startupProbe:
+            tcpSocket: { port: 8888 }
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket: { port: 8888 }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8888 }
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml $j.resources | nindent 12 }}
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: {{ $root.Release.Name }}-{{ $name }}
+{{- end }}
+{{- end }}
