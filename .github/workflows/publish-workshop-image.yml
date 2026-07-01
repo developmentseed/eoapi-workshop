@@ -7,12 +7,13 @@ on:
   push:
     branches:
       - main
+      - foss4geu-helmchart        # workshop branch — image is built from here for now
     paths:
       - Dockerfile.local
       - environment.yml
       - docs/**
       - .github/workflows/publish-workshop-image.yml
-  workflow_dispatch: {}          # manual run — e.g. to build from the workshop branch
+  workflow_dispatch: {}          # manual run (once this workflow is on the default branch)
 
 jobs:
   publish:
