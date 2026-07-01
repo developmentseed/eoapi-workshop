@@ -1,27 +1,25 @@
 #!/usr/bin/env bash
 #
-# Reproducible deploy for the eoapi-workshop chart.
+# Reproducible deploy for the eoapi-workshop chart (subdomain-per-service).
 #
-# One command rebuilds everything on a fresh cluster: the cluster-wide
-# prerequisites (NGINX ingress controller + Crunchy Postgres Operator), the
-# chart dependency, and the eoapi release — then verifies it end to end.
-#
-# Nothing host-specific is baked in: the ingress host is discovered from the
-# LoadBalancer at run time (<LB-IP>.nip.io), so a torn-down/rebuilt cluster that
-# gets a new LB IP just works. Override with INGRESS_HOST for a fixed DNS name,
-# or INGRESS_HOST=localhost for a local cluster (kind/minikube/k3s).
+# Every service is served at the root of its own subdomain under a wildcard
+# domain: stac. raster. vector. browser. manager. mock-oidc. lab-01..NN. of
+# ${BASE_DOMAIN}. A wildcard DNS record `*.${BASE_DOMAIN}` must point at the
+# ingress LoadBalancer.
 #
 # Usage:
 #   ./deploy.sh deploy            # prerequisites + chart + verify (idempotent)
-#   ./deploy.sh verify            # re-run endpoint/auth checks only
-#   ./deploy.sh teardown          # remove the eoapi release, PVCs and namespace
-#   ./deploy.sh teardown --all    # also remove ingress-nginx + PGO (full reset)
+#   ./deploy.sh verify            # re-run endpoint/auth checks + print Lab URLs
+#   ./deploy.sh urls              # print the participant Lab URLs (with tokens)
+#   ./deploy.sh overrides         # (re)generate + print .deploy/overrides.yaml, no deploy
+#   ./deploy.sh teardown          # remove the release, PVCs and namespace
+#   ./deploy.sh teardown --all    # also remove ingress-nginx + PGO
 #
 # Env:
-#   RELEASE        Helm release name   (default: eoapi)   -- see OIDC contract below
-#   NAMESPACE      target namespace    (default: eoapi)   -- see OIDC contract below
-#   INGRESS_HOST   pin the host        (default: auto <LB-IP>.nip.io)
-#   SKIP_PREREQS=1 skip the ingress-nginx + PGO install
+#   RELEASE       Helm release name   (default: eoapi)   -- see OIDC contract below
+#   NAMESPACE     target namespace    (default: eoapi)   -- see OIDC contract below
+#   BASE_DOMAIN   wildcard base domain (default: eoapi-workshop.ds.io)
+#   SKIP_PREREQS=1  skip the ingress-nginx + PGO install
 #
 # !!! OIDC CONTRACT !!! The proxy's OIDC_DISCOVERY_INTERNAL_URL is pinned to the
 # Service DNS name eoapi-mock-oidc-server.eoapi.svc.cluster.local, derived from
@@ -30,17 +28,14 @@ set -euo pipefail
 
 RELEASE="${RELEASE:-eoapi}"
 NAMESPACE="${NAMESPACE:-eoapi}"
+BASE_DOMAIN="${BASE_DOMAIN:-eoapi-workshop.ds.io}"
 CHART_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OVERRIDES="${CHART_DIR}/.deploy/overrides.yaml"
 
 log() { printf '\n\033[1;34m==> %s\033[0m\n' "$*" >&2; }
 
 install_prereqs() {
-  if [[ "${SKIP_PREREQS:-0}" == "1" ]]; then
-    log "Skipping prerequisites (SKIP_PREREQS=1)"
-    return
-  fi
-  # Don't touch an externally-managed ingress controller: a bare
-  # `helm upgrade --install` with no values could revert its configuration.
+  if [[ "${SKIP_PREREQS:-0}" == "1" ]]; then log "Skipping prerequisites (SKIP_PREREQS=1)"; return; fi
   if kubectl get ingressclass nginx >/dev/null 2>&1; then
     log "An 'nginx' ingressclass already exists — leaving ingress-nginx untouched"
   else
@@ -49,136 +44,146 @@ install_prereqs() {
       --repo https://kubernetes.github.io/ingress-nginx \
       --namespace ingress-nginx --create-namespace --wait --timeout 5m
   fi
-
   log "Installing Crunchy Postgres Operator (PGO)"
   helm upgrade --install pgo oci://registry.developers.crunchydata.com/crunchydata/pgo \
     --namespace postgres-operator --create-namespace --wait --timeout 5m
-
-  # Wait for the LoadBalancer only if we can see the controller Service (we may
-  # have skipped the install above for a differently-named, external controller).
-  if kubectl -n ingress-nginx get svc ingress-nginx-controller >/dev/null 2>&1; then
-    log "Waiting for the ingress LoadBalancer to be assigned"
-    kubectl -n ingress-nginx wait --for=jsonpath='{.status.loadBalancer.ingress}' \
-      svc/ingress-nginx-controller --timeout=300s || true
-  fi
 }
 
-# Resolve the externally-reachable ingress host (echoed to stdout).
-discover_host() {
-  if [[ -n "${INGRESS_HOST:-}" ]]; then echo "${INGRESS_HOST}"; return; fi
-  local ip host
-  ip="$(kubectl -n ingress-nginx get svc ingress-nginx-controller \
-        -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
-  if [[ -n "${ip}" ]]; then echo "${ip}.nip.io"; return; fi
-  # Some clouds hand out a hostname instead of an IP.
-  host="$(kubectl -n ingress-nginx get svc ingress-nginx-controller \
-          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
-  if [[ -n "${host}" ]]; then echo "${host}"; return; fi
-  echo "ERROR: could not resolve the ingress host. Set INGRESS_HOST explicitly." >&2
-  exit 1
+# Participant names, read from the rendered chart (single source of truth = values).
+participant_names() {
+  helm template "$RELEASE" "$CHART_DIR" -n "$NAMESPACE" \
+    --show-only templates/jupyter.yaml 2>/dev/null \
+    | grep -oE "^  name: ${RELEASE}-[a-z0-9-]+" | sed "s/  name: ${RELEASE}-//" | sort -u
 }
 
-# Write per-host overrides for $1=host to the file path $2. localhost matches the
-# committed defaults; any other host needs the ingress + external auth URLs moved.
-# (The internal OIDC URL is in-cluster DNS and is intentionally left untouched.)
+# Reuse a participant's token from the existing overrides (idempotent URLs across
+# re-deploys); prints nothing and returns 1 if not present.
+existing_token() { # <name>
+  [[ -f "$OVERRIDES" ]] || return 1
+  local t; t="$(grep -E "name: $1, token:" "$OVERRIDES" 2>/dev/null | sed -E 's/.*token: "([^"]+)".*/\1/' | head -1)"
+  [[ -n "$t" ]] && printf '%s' "$t"
+}
+
+# Host-specific overrides — derived, NEVER committed (gitignored .deploy/).
 write_overrides() {
-  local host="$1" file="$2"
-  cat > "${file}" <<EOF
-# Generated by deploy.sh for host ${host} — DO NOT COMMIT.
-eoapi:
-  ingress:
-    host: "${host}"
-  stac-auth-proxy:
-    env:                       # map: deep-merges with DEFAULT_PUBLIC + internal URL
-      OIDC_DISCOVERY_URL: "http://${host}/mock-oidc/.well-known/openid-configuration"
-  browser:
-    oidcDiscoveryUrl: "http://${host}/mock-oidc/.well-known/openid-configuration"
-  testing:
-    mockOidcServer:
-      extraEnv:                # list: must be restated in full (ISSUER + SCOPES)
-        - name: ISSUER
-          value: "http://${host}/mock-oidc"
-        - name: SCOPES
-          value: "stac:read,stac:write"
-EOF
+  mkdir -p "$(dirname "$OVERRIDES")"
+  local tmp; tmp="$(mktemp)"
+  {
+    echo "# Generated by deploy.sh — DO NOT COMMIT. baseDomain=${BASE_DOMAIN}"
+    echo "routing:"
+    echo "  baseDomain: \"${BASE_DOMAIN}\""
+    echo "eoapi:"
+    echo "  browser:"
+    echo "    catalogUrl: \"http://stac.${BASE_DOMAIN}\""
+    echo "    oidcDiscoveryUrl: \"http://mock-oidc.${BASE_DOMAIN}/.well-known/openid-configuration\""
+    echo "  stac-auth-proxy:"
+    echo "    env:"
+    echo "      OIDC_DISCOVERY_URL: \"http://mock-oidc.${BASE_DOMAIN}/.well-known/openid-configuration\""
+    echo "  testing:"
+    echo "    mockOidcServer:"
+    echo "      extraEnv:"                       # list: restate in full
+    echo "        - name: ISSUER"
+    echo "          value: \"http://mock-oidc.${BASE_DOMAIN}\""
+    echo "        - name: SCOPES"
+    echo "          value: \"stac:read,stac:write\""
+    echo "stac-manager:"
+    echo "  publicUrl: \"http://manager.${BASE_DOMAIN}\""
+    echo "  stacApi: \"http://stac.${BASE_DOMAIN}\""
+    echo "  stacBrowser: \"http://browser.${BASE_DOMAIN}\""
+    echo "  oidc:"
+    echo "    authority: \"http://mock-oidc.${BASE_DOMAIN}\""
+    echo "jupyter:"
+    echo "  participants:"
+    local name tok
+    while read -r name; do
+      [[ -n "$name" ]] || continue
+      tok="$(existing_token "$name" || true)"; [[ -n "$tok" ]] || tok="$(openssl rand -hex 16)"
+      echo "    - { name: ${name}, token: \"${tok}\" }"
+    done < <(participant_names)
+  } > "$tmp"
+  mv "$tmp" "$OVERRIDES"
 }
 
 deploy_chart() {
   log "Building chart dependencies"
-  helm dependency build "${CHART_DIR}"
-
-  local host overrides
-  host="$(discover_host)"
-  # Host-specific overrides are a derived artifact, never committed: written to a
-  # predictable, gitignored path so the exact rendered config stays inspectable
-  # (unlike a throwaway temp file). The host comes from $INGRESS_HOST or the LB.
-  overrides="${CHART_DIR}/.deploy/overrides.yaml"
-  mkdir -p "$(dirname "${overrides}")"
-  log "Deploying release '${RELEASE}' in namespace '${NAMESPACE}' (host: ${host})"
-  write_overrides "${host}" "${overrides}"
-  echo "  overrides written to ${overrides}"
-
-  helm upgrade --install "${RELEASE}" "${CHART_DIR}" \
-    -n "${NAMESPACE}" --create-namespace -f "${overrides}"
-
-  log "Waiting for API deployments (the database is created asynchronously by PGO)"
+  helm dependency build "$CHART_DIR" >/dev/null
+  log "Writing host overrides for ${BASE_DOMAIN} (tokens preserved across re-deploys)"
+  write_overrides
+  echo "  overrides: ${OVERRIDES}"
+  log "Deploying release '${RELEASE}' in namespace '${NAMESPACE}'"
+  helm upgrade --install "$RELEASE" "$CHART_DIR" \
+    -n "$NAMESPACE" --create-namespace -f "$OVERRIDES"
+  log "Waiting for deployments (the database is created asynchronously by PGO)"
   local d
-  for d in stac raster vector browser stac-auth-proxy mock-oidc-server; do
-    kubectl -n "${NAMESPACE}" rollout status "deploy/${RELEASE}-${d}" --timeout=300s
+  for d in stac raster vector browser stac-auth-proxy mock-oidc-server stac-manager $(participant_names); do
+    kubectl -n "$NAMESPACE" rollout status "deploy/${RELEASE}-${d}" --timeout=300s || true
   done
+}
+
+# curl a URL until it returns the expected code (nginx warmup can lag).
+_expect() { # <url> <code> -> echoes actual code, returns 0 if matched
+  local url="$1" want="$2" code="" _
+  for _ in 1 2 3 4 5 6 7 8; do
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$url" || true)"
+    [[ "$code" == "$want" ]] && break; sleep 3
+  done
+  printf '%s' "$code"
 }
 
 verify() {
-  local host base code token ov="${CHART_DIR}/.deploy/overrides.yaml"
-  # Prefer the host actually deployed (recorded in the overrides) so a standalone
-  # `verify` run checks the right URL even without INGRESS_HOST in the environment.
-  host="${INGRESS_HOST:-}"
-  [[ -z "${host}" && -f "${ov}" ]] && host="$(sed -n 's/^    host: "\(.*\)"/\1/p' "${ov}" | head -1)"
-  [[ -n "${host}" ]] || host="$(discover_host)"
-  base="http://${host}"
-  log "Verifying endpoints at ${base}"
-  local ok=1 p
-  # Retry the read paths: nginx reload + first-request warmup can lag a few seconds.
-  for p in /stac/healthz /stac/collections /raster/healthz /vector/healthz /browser/ \
-           /mock-oidc/.well-known/openid-configuration; do
-    code=""
-    for _ in 1 2 3 4 5 6 7 8; do
-      code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "${base}${p}" || true)"
-      [[ "${code}" == "200" ]] && break
-      sleep 3
-    done
-    printf '  %-44s %s\n' "${p}" "${code}"
-    [[ "${code}" == "200" ]] || ok=0
+  local b="$BASE_DOMAIN" ok=1 code
+  log "Verifying service subdomains at *.$b"
+  declare -a checks=(
+    "http://stac.$b/healthz|200|stac"
+    "http://stac.$b/collections|200|stac collections"
+    "http://raster.$b/healthz|200|raster"
+    "http://vector.$b/healthz|200|vector"
+    "http://browser.$b/|200|browser"
+    "http://manager.$b/|200|manager"
+    "http://mock-oidc.$b/.well-known/openid-configuration|200|mock-oidc"
+  )
+  local c url want name
+  for c in "${checks[@]}"; do
+    IFS='|' read -r url want name <<<"$c"
+    code="$(_expect "$url" "$want")"
+    printf '  %-16s %-52s %s\n' "$name" "$url" "$code"
+    [[ "$code" == "$want" ]] || ok=0
   done
 
   log "Verifying auth (expect 401 without a token, non-401 with one)"
-  local no_tok with_tok
+  local no_tok token with_tok
   no_tok="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
-    -X POST "${base}/stac/collections" -H 'Content-Type: application/json' -d '{}' || true)"
-  token="$(curl -s --max-time 15 "${base}/mock-oidc/" \
+    -X POST "http://stac.$b/collections" -H 'Content-Type: application/json' -d '{}' || true)"
+  token="$(curl -s --max-time 15 "http://mock-oidc.$b/" \
     --data-raw 'username=testuser&scopes=openid+stac:read+stac:write' \
     -H 'Accept: application/json' | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')"
   with_tok="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
-    -X POST "${base}/stac/collections" -H "Authorization: Bearer ${token}" \
+    -X POST "http://stac.$b/collections" -H "Authorization: Bearer ${token}" \
     -H 'Content-Type: application/json' -d '{}' || true)"
-  printf '  POST without token: %s   with token: %s\n' "${no_tok}" "${with_tok}"
-  [[ "${no_tok}" == "401" && "${with_tok}" != "401" && -n "${with_tok}" ]] || ok=0
+  printf '  POST without token: %s   with token: %s\n' "$no_tok" "$with_tok"
+  [[ "$no_tok" == "401" && "$with_tok" != "401" && -n "$with_tok" ]] || ok=0
 
-  if [[ "${ok}" == "1" ]]; then
-    log "OK — all endpoints reachable and auth enforced. UI: ${base}/browser/"
-  else
-    log "FAILED — see non-200/unexpected codes above"; exit 1
-  fi
+  print_urls
+  if [[ "$ok" == 1 ]]; then log "OK — services reachable and auth enforced."; else log "FAILED — see codes above"; exit 1; fi
+}
+
+print_urls() {
+  log "Participant JupyterLab URLs"
+  local name tok
+  while read -r name; do
+    [[ -n "$name" ]] || continue
+    tok="$(existing_token "$name" || true)"
+    printf '  %-8s http://%s.%s/lab?token=%s\n' "$name" "$name" "$BASE_DOMAIN" "$tok"
+  done < <(participant_names)
+  printf '  %-8s http://manager.%s/\n' "manager" "$BASE_DOMAIN"
+  printf '  %-8s http://browser.%s/\n' "browser" "$BASE_DOMAIN"
 }
 
 teardown() {
-  # Wait for deletions to complete (no --wait=false) so a follow-up `deploy` does
-  # not race a still-Terminating namespace. Order matters: uninstall the release
-  # (and let PGO clear the PostgresCluster finalizer) before removing PGO itself.
   log "Uninstalling release '${RELEASE}'"
-  helm uninstall "${RELEASE}" -n "${NAMESPACE}" 2>/dev/null || true
-  kubectl -n "${NAMESPACE}" delete pvc --all 2>/dev/null || true
-  kubectl delete namespace "${NAMESPACE}" --timeout=180s 2>/dev/null || true
+  helm uninstall "$RELEASE" -n "$NAMESPACE" 2>/dev/null || true
+  kubectl -n "$NAMESPACE" delete pvc --all 2>/dev/null || true
+  kubectl delete namespace "$NAMESPACE" --timeout=180s 2>/dev/null || true
   if [[ "${1:-}" == "--all" ]]; then
     log "Removing prerequisites (ingress-nginx + PGO)"
     helm uninstall ingress-nginx -n ingress-nginx 2>/dev/null || true
@@ -190,6 +195,8 @@ teardown() {
 case "${1:-deploy}" in
   deploy)   install_prereqs; deploy_chart; verify ;;
   verify)   verify ;;
+  urls)     print_urls ;;
+  overrides) write_overrides; echo "written: ${OVERRIDES}"; cat "$OVERRIDES" ;;
   teardown) teardown "${2:-}" ;;
-  *) echo "Usage: $0 {deploy|verify|teardown [--all]}" >&2; exit 2 ;;
+  *) echo "Usage: $0 {deploy|verify|urls|teardown [--all]}" >&2; exit 2 ;;
 esac
