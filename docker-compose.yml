@@ -1,6 +1,6 @@
 services:
   database:
-    image: ghcr.io/stac-utils/pgstac:v0.9.8
+    image: ghcr.io/stac-utils/pgstac:v0.9.10
     environment:
       - POSTGRES_USER=username
       - POSTGRES_PASSWORD=password
@@ -58,6 +58,32 @@ services:
       retries: 3
       start_period: 120s
 
+
+  # Load a public STAC collection from the MAAP STAC into pgstac so notebook 04
+  # §4.5 has data — mirrors the 2i2c deploy step and the Helm chart's
+  # features-loader Job (stac-loader container). Idempotent: skips if present.
+  stac-loader:
+    image: python:3.12-slim
+    depends_on:
+      database:
+        condition: service_started
+    environment:
+      - PGHOST=database
+      - PGUSER=username
+      - PGPASSWORD=password
+      - PGDATABASE=postgis
+      - PGPORT=5432
+    restart: "no"
+    command: >
+      bash -c '
+        set -euo pipefail &&
+        pip install -q "pypgstac[psycopg]==0.9.10" &&
+        sleep 5 &&
+        python3 /opt/load_stac.py
+      '
+    configs:
+      - source: load_stac
+        target: /opt/load_stac.py
 
   stac-fastapi:
     image: ghcr.io/stac-utils/stac-fastapi-pgstac:6.2.2
@@ -134,9 +160,11 @@ services:
       # TiTiler Config
       - MOSAIC_CONCURRENCY=1
       - TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS=True
-      # AWS S3 endpoint config
+      # AWS S3 endpoint config — the workshop's s3:// assets (glad collection)
+      # are in public buckets; read unsigned unless real credentials are provided
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_NO_SIGN_REQUEST=${AWS_NO_SIGN_REQUEST:-YES}
     depends_on:
       database:
         condition: service_started
@@ -216,6 +244,38 @@ services:
       - TIPG_API_ENDPOINT=http://tipg:8083
       - STAC_BROWSER_ENDPOINT=http://localhost:8080
       - STAC_MANAGER_ENDPOINT=http://localhost:8086
+
+configs:
+  # same loader as the Helm chart's stac-loader container — keep in sync
+  load_stac:
+    content: |
+      import json
+      import sys
+      import urllib.request
+
+      from pypgstac.db import PgstacDB
+      from pypgstac.load import Loader, Methods
+
+      SRC = "https://stac.maap-project.org"
+      COLLECTION = "glad-global-forest-change-1.11"
+      LIMIT = 100
+
+      db = PgstacDB()
+      if db.query_one("select 1 from pgstac.collections where id=%s", [COLLECTION]):
+          print(f"{COLLECTION} already present -- skipping load.")
+          sys.exit(0)
+
+      urllib.request.urlretrieve(f"{SRC}/collections/{COLLECTION}", "/tmp/collection.json")
+      with urllib.request.urlopen(f"{SRC}/search?collections={COLLECTION}&limit={LIMIT}") as r:
+          features = json.load(r)["features"]
+      with open("/tmp/items.ndjson", "w") as f:
+          for feat in features:
+              f.write(json.dumps(feat) + "\n")
+
+      loader = Loader(db=db)
+      loader.load_collections("/tmp/collection.json", Methods.upsert)
+      loader.load_items("/tmp/items.ndjson", Methods.upsert)
+      print(f"{COLLECTION}: collection + {len(features)} items loaded.")
 
 volumes:
   pgdata:

@@ -72,6 +72,7 @@ for svc in titiler-pgstac tipg stac-fastapi-pgstac; do
   check_has "$ALL" "$(sed 's/[.[]/\\&/g' <<<"$img")" "chart runs compose's ${img##*/}"
 done
 check_has "$ALL" 'TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS' "raster external-dataset endpoints enabled (notebook 04 §4.4)"
+check_has "$ALL" 'AWS_NO_SIGN_REQUEST' "raster reads public s3:// assets unsigned (glad collection)"
 
 echo "== auth wiring =="
 # The proxy fetches JWKS from OIDC_DISCOVERY_URL's origin, so it MUST be the
@@ -93,6 +94,8 @@ check_has    "$FA" 'name: eoapi-features-loader'   "features-loader Job renders"
 check_has    "$FA" 'features\.ecoregions'          "loader targets features.ecoregions"
 check_has    "$FA" 'name: eoapi-pguser-postgres'   "loader uses the superuser secret"
 check_has    "$FA" 'TIPG_DB_SCHEMAS'               "tipg exposes the features schema"
+check_has    "$FA" 'glad-global-forest-change-1\.11' "loader ingests the glad STAC collection (notebook 04 §4.5)"
+check_has    "$FA" 'pypgstac\[psycopg\]==0\.9\.10' "pypgstac pinned to the deployed pgstac version"
 FA_OFF="$(helm template "$REL" "$CHART_DIR" -n "$NS" --set featuresLoader.enabled=false 2>/dev/null)"
 check_absent "$FA_OFF" 'name: eoapi-features-loader' "featuresLoader.enabled=false renders nothing"
 

@@ -127,6 +127,9 @@ eoapi:
       envVars:
         # Notebook 04 §4.4 uses /external/* (needs this flag, as in docker-compose)
         TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS: "True"
+        # The workshop's s3:// assets (glad collection) live in public buckets;
+        # read them unsigned — no AWS credentials in this deployment.
+        AWS_NO_SIGN_REQUEST: "YES"
         # GDAL performance settings
         GDAL_CACHEMAX: "200"
         GDAL_DISABLE_READDIR_ON_OPEN: "EMPTY_DIR"
@@ -379,3 +382,12 @@ featuresLoader:
   resources:
     requests: { cpu: "200m", memory: "512Mi" }
     limits: { cpu: "1", memory: "2Gi" }
+  # STAC data for notebook 04 §4.5: mirror of the 2i2c deploy step that loads a
+  # public collection from the MAAP STAC into pgstac.
+  stac:
+    image: python:3.12-slim
+    source: "https://stac.maap-project.org"
+    collection: "glad-global-forest-change-1.11"
+    itemLimit: 100
+    # keep in lockstep with the pgstac version the eoapi subchart migrates to
+    pypgstacVersion: "0.9.10"
