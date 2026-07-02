@@ -73,6 +73,7 @@ services:
       - POSTGRES_PORT=5432
       - DB_MIN_CONN_SIZE=1
       - DB_MAX_CONN_SIZE=1
+      - ENABLE_TRANSACTIONS_EXTENSIONS=1
     depends_on:
       database:
         condition: service_started
@@ -80,6 +81,29 @@ services:
         condition: service_healthy
     command:
       bash -c "uvicorn stac_fastapi.pgstac.app:app --host 0.0.0.0 --port 8081"
+
+  mock-oidc:
+    image: ghcr.io/alukach/mock-oidc-server:latest
+    ports:
+      - 8085:8888
+    environment:
+      - ISSUER=http://localhost:8085
+      - PORT=8888
+      - SCOPES=stac:read,stac:write
+
+  stac-auth-proxy:
+    image: ghcr.io/developmentseed/stac-auth-proxy:latest
+    ports:
+      - 8084:8000
+    environment:
+      - UPSTREAM_URL=http://stac-fastapi:8081
+      - OIDC_DISCOVERY_URL=http://localhost:8085/.well-known/openid-configuration
+      - OIDC_DISCOVERY_INTERNAL_URL=http://mock-oidc:8888/.well-known/openid-configuration
+      - DEFAULT_PUBLIC=true
+      - WAIT_FOR_UPSTREAM=true
+    depends_on:
+      - stac-fastapi
+      - mock-oidc
 
   titiler-pgstac:
     platform: linux/amd64
@@ -150,10 +174,28 @@ services:
     ports:
       - 8080:8080
     environment:
-      SB_catalogUrl: "http://0.0.0.0:8081"
+      SB_catalogUrl: "http://localhost:8084"
     depends_on:
-      - stac-fastapi
+      - stac-auth-proxy
       - database
+
+  stac-manager:
+    # no arm64 manifest published — run the amd64 image under emulation
+    platform: linux/amd64
+    image: ghcr.io/developmentseed/stac-manager:1.0.3
+    ports:
+      - 8086:8080
+    environment:
+      - PUBLIC_URL=http://localhost:8086
+      - REACT_APP_STAC_API=http://localhost:8084
+      - REACT_APP_STAC_BROWSER=http://localhost:8080
+      - REACT_APP_OIDC_AUTHORITY=http://localhost:8085
+      - REACT_APP_OIDC_CLIENT_ID=stac-manager
+      - APP_TITLE=STAC Manager
+      - APP_DESCRIPTION=Manage STAC collections and items in the eoAPI workshop stack
+    depends_on:
+      - stac-auth-proxy
+      - mock-oidc
 
   jupyterhub:
     build:
@@ -169,10 +211,13 @@ services:
       - PGPASSWORD=password
       - PGDATABASE=postgis
       - PGPORT=5432
-      - STAC_API_ENDPOINT=http://stac-fastapi:8081
+      - STAC_API_ENDPOINT=http://stac-auth-proxy:8000
+      - STAC_AUTH_PROXY_ENDPOINT=http://stac-auth-proxy:8000
+      - MOCK_OIDC_ENDPOINT=http://mock-oidc:8888
       - TITILER_PGSTAC_API_ENDPOINT=http://titiler-pgstac:8082
       - TIPG_API_ENDPOINT=http://tipg:8083
       - STAC_BROWSER_ENDPOINT=http://localhost:8080
+      - STAC_MANAGER_ENDPOINT=http://localhost:8086
 
 volumes:
   pgdata:
