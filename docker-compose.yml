@@ -59,6 +59,32 @@ services:
       start_period: 10s
 
 
+  # Load a public STAC collection from the MAAP STAC into pgstac so notebook 04
+  # has data for the GLAD Global Forest Change examples. Idempotent: skips if
+  # the collection is already present.
+  stac-loader:
+    image: python:3.12-slim
+    depends_on:
+      database:
+        condition: service_started
+    environment:
+      - PGHOST=database
+      - PGUSER=username
+      - PGPASSWORD=password
+      - PGDATABASE=postgis
+      - PGPORT=5432
+    restart: "no"
+    command: >
+      bash -c '
+        set -euo pipefail &&
+        pip install -q "pypgstac[psycopg]==0.9.8" &&
+        sleep 5 &&
+        python3 /opt/load_stac.py
+      '
+    configs:
+      - source: load_stac
+        target: /opt/load_stac.py
+
   stac-fastapi:
     image: ghcr.io/stac-utils/stac-fastapi-pgstac:6.0.2
     ports:
@@ -173,6 +199,37 @@ services:
       - TITILER_PGSTAC_API_ENDPOINT=http://titiler-pgstac:8082
       - TIPG_API_ENDPOINT=http://tipg:8083
       - STAC_BROWSER_ENDPOINT=http://localhost:8080
+
+configs:
+  load_stac:
+    content: |
+      import json
+      import sys
+      import urllib.request
+
+      from pypgstac.db import PgstacDB
+      from pypgstac.load import Loader, Methods
+
+      SRC = "https://stac.maap-project.org"
+      COLLECTION = "glad-global-forest-change-1.11"
+      LIMIT = 100
+
+      db = PgstacDB()
+      if db.query_one("select 1 from pgstac.collections where id=%s", [COLLECTION]):
+          print(f"{COLLECTION} already present -- skipping load.")
+          sys.exit(0)
+
+      urllib.request.urlretrieve(f"{SRC}/collections/{COLLECTION}", "/tmp/collection.json")
+      with urllib.request.urlopen(f"{SRC}/search?collections={COLLECTION}&limit={LIMIT}") as r:
+          features = json.load(r)["features"]
+      with open("/tmp/items.ndjson", "w") as f:
+          for feat in features:
+              f.write(json.dumps(feat) + "\n")
+
+      loader = Loader(db=db)
+      loader.load_collections("/tmp/collection.json", Methods.upsert)
+      loader.load_items("/tmp/items.ndjson", Methods.upsert)
+      print(f"{COLLECTION}: collection + {len(features)} items loaded.")
 
 volumes:
   pgdata:
