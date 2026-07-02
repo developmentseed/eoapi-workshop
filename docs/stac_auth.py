@@ -13,9 +13,7 @@ import re
 
 import httpx
 
-_TOKEN_PATTERN = re.compile(
-    r'<textarea[^>]*id="token"[^>]*>(.*?)</textarea>', re.S
-)
+_TOKEN_PATTERN = re.compile(r'<textarea[^>]*id="token"[^>]*>(.*?)</textarea>', re.S)
 
 
 def stac_endpoint() -> str:

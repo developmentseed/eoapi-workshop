@@ -1,0 +1,122 @@
+{{/*
+k8s equivalent of the docker-compose `features-loader` + `stac-loader`: load
+the NA CEC Level III Ecoregions shapefile into features.ecoregions (notebook
+05 / tipg) and the glad STAC collection from the MAAP STAC into pgstac
+(notebook 04 §4.5 / titiler). Runs as a post-install/post-upgrade hook,
+idempotently (each container skips if its data is already present). Uses the
+PGO superuser secret to CREATE SCHEMA and grants read to all users so tipg can
+serve it. Loads into the `eoapi` database (what tipg and pgstac serve).
+*/}}
+{{- if .Values.featuresLoader.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-features-loader
+  labels:
+    app: {{ .Release.Name }}-features-loader
+    app.kubernetes.io/component: workshop-features-loader
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "10"                 # after the DB / pgstac bootstrap
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-features-loader
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: features-loader
+          image: {{ .Values.featuresLoader.image | quote }}
+          command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+              apt-get update -qq && apt-get install -y -qq postgresql-client >/dev/null
+              for _ in $(seq 1 60); do pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" && break; echo "waiting for database..."; sleep 5; done
+              if psql -tAc "select 1 from information_schema.tables where table_schema='features' and table_name='ecoregions'" | grep -q 1; then
+                echo "features.ecoregions already present — skipping load."; exit 0
+              fi
+              psql -v ON_ERROR_STOP=1 -c "CREATE SCHEMA IF NOT EXISTS features;"
+              ogr2ogr -f PostgreSQL "PG:dbname=$PGDATABASE host=$PGHOST port=$PGPORT user=$PGUSER password=$PGPASSWORD" \
+                {{ .Values.featuresLoader.shapefileUrl | quote }} \
+                -nln features.ecoregions -t_srs EPSG:4326 \
+                -lco GEOMETRY_NAME=geom -lco FID=id -lco PRECISION=NO -nlt PROMOTE_TO_MULTI
+              psql -v ON_ERROR_STOP=1 -c "GRANT USAGE ON SCHEMA features TO PUBLIC; GRANT SELECT ON ALL TABLES IN SCHEMA features TO PUBLIC;"
+              echo "features.ecoregions loaded."
+          env:
+            # Superuser creds (needed for CREATE SCHEMA); DB is pinned to `eoapi`
+            # (what tipg queries), not the secret's dbname.
+            - name: PGDATABASE
+              value: "eoapi"
+            - name: PGHOST
+              valueFrom: { secretKeyRef: { name: {{ .Release.Name }}-pguser-postgres, key: host } }
+            - name: PGPORT
+              valueFrom: { secretKeyRef: { name: {{ .Release.Name }}-pguser-postgres, key: port } }
+            - name: PGUSER
+              valueFrom: { secretKeyRef: { name: {{ .Release.Name }}-pguser-postgres, key: user } }
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Release.Name }}-pguser-postgres, key: password } }
+          resources:
+            {{- toYaml .Values.featuresLoader.resources | nindent 12 }}
+        - name: stac-loader
+          image: {{ .Values.featuresLoader.stac.image | quote }}
+          command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+              pip install -q "pypgstac[psycopg]=={{ .Values.featuresLoader.stac.pypgstacVersion }}"
+              python3 - <<'PY'
+              import json
+              import sys
+              import urllib.request
+
+              from pypgstac.db import PgstacDB
+              from pypgstac.load import Loader, Methods
+
+              SRC = {{ .Values.featuresLoader.stac.source | quote }}
+              COLLECTION = {{ .Values.featuresLoader.stac.collection | quote }}
+              LIMIT = {{ .Values.featuresLoader.stac.itemLimit }}
+
+              db = PgstacDB()
+              if db.query_one(
+                  "select 1 from pgstac.collections where id=%s", [COLLECTION]
+              ):
+                  print(f"{COLLECTION} already present -- skipping load.")
+                  sys.exit(0)
+
+              urllib.request.urlretrieve(
+                  f"{SRC}/collections/{COLLECTION}", "/tmp/collection.json"
+              )
+              with urllib.request.urlopen(
+                  f"{SRC}/search?collections={COLLECTION}&limit={LIMIT}"
+              ) as r:
+                  features = json.load(r)["features"]
+              with open("/tmp/items.ndjson", "w") as f:
+                  for feat in features:
+                      f.write(json.dumps(feat) + "\n")
+
+              loader = Loader(db=db)
+              loader.load_collections("/tmp/collection.json", Methods.upsert)
+              loader.load_items("/tmp/items.ndjson", Methods.upsert)
+              print(f"{COLLECTION}: collection + {len(features)} items loaded.")
+              PY
+          env:
+            - name: PGDATABASE
+              value: "eoapi"
+            - name: PGHOST
+              valueFrom: { secretKeyRef: { name: {{ .Release.Name }}-pguser-postgres, key: host } }
+            - name: PGPORT
+              valueFrom: { secretKeyRef: { name: {{ .Release.Name }}-pguser-postgres, key: port } }
+            - name: PGUSER
+              valueFrom: { secretKeyRef: { name: {{ .Release.Name }}-pguser-postgres, key: user } }
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Release.Name }}-pguser-postgres, key: password } }
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "1Gi" }
+{{- end }}
