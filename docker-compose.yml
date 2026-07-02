@@ -137,12 +137,12 @@ services:
     ports:
       - 8082:8082
     environment:
-      # Postgres connection
-      - POSTGRES_USER=username
-      - POSTGRES_PASS=password
-      - POSTGRES_DBNAME=postgis
-      - POSTGRES_HOST=database
-      - POSTGRES_PORT=5432
+      # Postgres connection — titiler-pgstac 3.x reads PG* (POSTGRES_* was dropped)
+      - PGUSER=username
+      - PGPASSWORD=password
+      - PGDATABASE=postgis
+      - PGHOST=database
+      - PGPORT=5432
       - DB_MIN_CONN_SIZE=1
       - DB_MAX_CONN_SIZE=10
       # - DB_MAX_QUERIES=10
