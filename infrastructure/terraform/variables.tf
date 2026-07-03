@@ -76,6 +76,24 @@ variable "node_count" {
   default     = 3
 }
 
+variable "ingress_nginx_chart_version" {
+  description = "ingress-nginx Helm chart version to install. Empty string installs the latest; pin for reproducibility."
+  type        = string
+  default     = ""
+}
+
+variable "enable_cert_manager" {
+  description = "Install cert-manager (needed for TLS via the workshop chart's deploy.sh TLS=1). Harmless when idle."
+  type        = bool
+  default     = true
+}
+
+variable "cert_manager_chart_version" {
+  description = "cert-manager Helm chart version. Empty string installs the latest; pin for reproducibility."
+  type        = string
+  default     = ""
+}
+
 ###############################################################################
 # DNS (AWS Route53)
 ###############################################################################

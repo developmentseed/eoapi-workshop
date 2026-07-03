@@ -34,34 +34,8 @@ resource "openstack_networking_router_interface_v2" "router" {
   subnet_id = openstack_networking_subnet_v2.private.id
 }
 
-###############################################################################
-# Ingress load balancer
-#
-# OVH's classic/Neutron-LBaaS load balancer is deprecated in favour of Octavia.
-# `openstack_lb_loadbalancer_v2` is the Octavia (LBaaS v2) resource, so this IS
-# an Octavia load balancer. We pre-create it (plus a floating IP) so the public
-# address is known at apply time and the Route53 wildcard record (see dns.tf)
-# can be created in the same run — instead of racing an async Service-type
-# LoadBalancer provisioned later by the ingress controller.
-#
-# Point ingress-nginx at this LB by annotating its controller Service with:
-#     loadbalancer.openstack.org/load-balancer-id: <lb id — see outputs>
-# so the cloud controller adopts this LB rather than creating a new one.
-###############################################################################
-
-resource "openstack_lb_loadbalancer_v2" "ingress" {
-  name          = "${var.cluster_name}-ingress-lb"
-  region        = var.region
-  vip_subnet_id = openstack_networking_subnet_v2.private.id
-}
-
-resource "openstack_networking_floatingip_v2" "ingress" {
-  pool   = data.openstack_networking_network_v2.ext_net.name
-  region = var.region
-}
-
-resource "openstack_networking_floatingip_associate_v2" "ingress" {
-  region      = var.region
-  floating_ip = openstack_networking_floatingip_v2.ingress.address
-  port_id     = openstack_lb_loadbalancer_v2.ingress.vip_port_id
-}
+# NB: we do NOT pre-create the ingress load balancer. OVH Managed Kubernetes
+# does not honour the `loadbalancer.openstack.org/load-balancer-id` annotation
+# to adopt a pre-existing Octavia LB — it provisions its own. So ingress-nginx
+# owns the LB (see ingress.tf) and Terraform reads the public IP OVH assigns to
+# it for the Route53 record (see dns.tf).

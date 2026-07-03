@@ -6,40 +6,54 @@ runs on:
 - A **3-node `b3-16` OVH Managed Kubernetes** cluster (single fixed-size node pool).
 - A private network, subnet and router (nodes egress to the internet via the
   router's external gateway).
-- An **Octavia load balancer** with a public floating IP for cluster ingress.
+- **ingress-nginx** (installed via Helm), whose OVH-provisioned load balancer is
+  the cluster's public entry point.
+- **cert-manager** (installed via Helm; toggle with `enable_cert_manager`), used
+  by the workshop chart for Let's Encrypt TLS.
 - A **wildcard `A` record** `*.eoapi-workshop.ds.io` in **AWS Route53** pointing
-  at that floating IP.
+  at that load balancer's IP.
+
+Terraform owns the cluster **platform** (ingress-nginx, cert-manager); the
+workshop chart's `deploy.sh` owns the **application** (PGO + the eoAPI release).
+So `deploy.sh teardown` never removes platform controllers — `terraform destroy`
+does. This avoids `deploy.sh` deleting resources out from under Terraform's state.
 
 Every workshop service is served at the root of its own subdomain under the
 wildcard (`stac.`, `raster.`, `vector.`, `browser.`, `manager.`, `lab-01.`, …),
 so the one wildcard record covers all of them.
 
-## Why an Octavia LB + floating IP (not a Service `LoadBalancer`)?
+## How the ingress IP + DNS are wired
 
-OVH's classic/Neutron-LBaaS load balancer is deprecated in favour of **Octavia**;
-`openstack_lb_loadbalancer_v2` is the Octavia resource. We create it (and its
-floating IP) up front so the public IP is known at `terraform apply` time and the
-Route53 record can be created in the same run. The alternative — letting the
-ingress controller create a Service-type `LoadBalancer` — provisions the LB
-asynchronously, so its IP isn't available when Terraform needs it for DNS.
+OVH Managed Kubernetes provisions a load balancer whenever you create a
+Service of type `LoadBalancer`, and assigns it a public IP asynchronously — and
+it does **not** honour the `loadbalancer.openstack.org/load-balancer-id`
+annotation to adopt a pre-created Octavia LB (verified: it just makes its own).
 
-Point ingress-nginx at this LB by adding to its controller Service:
+So rather than pre-create a LB, Terraform:
 
-```yaml
-metadata:
-  annotations:
-    loadbalancer.openstack.org/load-balancer-id: "<ingress_load_balancer_id output>"
-```
+1. installs **ingress-nginx** (`helm_release`), which creates the Service and
+   causes OVH to provision the LB;
+2. waits ~90s, then **reads the IP** OVH assigned via a `kubernetes_service`
+   data source (`ingress.tf`);
+3. creates the Route53 wildcard record from that IP (`dns.tf`).
 
-so the cloud controller adopts this LB instead of creating a new one.
+All in one `terraform apply`. If OVH hasn't assigned the IP within the grace
+period, the apply errors on the DNS record — just re-run `terraform apply` and
+the data source re-reads the now-assigned IP. The IP is chosen by OVH at
+LB-creation time and changes if ingress-nginx is destroyed and recreated.
+
+The chart's `deploy.sh` detects this ingress-nginx install (the `nginx`
+ingressclass) and leaves it untouched.
 
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.9
 - An **OVH API token**: <https://www.ovh.com/auth/api/createToken?GET=/*&POST=/*&PUT=/*&DELETE=/*>
   (note the application key, application secret, consumer key)
-- An **OpenStack user** on the project
-  ([guide](https://help.ovhcloud.com/csm/en-public-cloud-compute-openstack-users?id=kb_article_view&sysparm_article=KB0050636))
+- A dedicated **OpenStack user** (`user-xxxxxxxx`) on the project — **not** your
+  OVH SSO login
+  ([guide](https://help.ovhcloud.com/csm/en-public-cloud-compute-openstack-users?id=kb_article_view&sysparm_article=KB0050636)).
+  Download its RC file for the exact `OS_USERNAME` / `OS_TENANT_ID` / region.
 - **AWS credentials** with `route53:*` on the hosted zone, via the standard AWS
   chain (`AWS_PROFILE`, env vars, or SSO)
 
@@ -73,9 +87,11 @@ S3-compatible), then run `terraform init -migrate-state`.
 | File | Purpose |
 |---|---|
 | `versions.tf`   | Terraform + provider versions; commented remote-state backend |
-| `providers.tf`  | `ovh`, `openstack`, `aws` provider config |
+| `providers.tf`  | `ovh`, `openstack`, `aws`, `helm`, `kubernetes` provider config |
 | `variables.tf`  | Input variables (all defaults documented) |
-| `network.tf`    | Private network, subnet, router, Octavia LB + floating IP |
+| `network.tf`    | Private network, subnet, router |
 | `kube.tf`       | Managed Kubernetes cluster + `b3-16` node pool |
-| `dns.tf`        | Route53 wildcard `A` record |
-| `outputs.tf`    | kubeconfig, cluster/LB IDs, ingress public IP |
+| `ingress.tf`    | ingress-nginx (Helm) + reads the LB IP OVH assigns |
+| `cert_manager.tf` | cert-manager (Helm) for Let's Encrypt TLS |
+| `dns.tf`        | Route53 wildcard `A` record → the ingress LB IP |
+| `outputs.tf`    | kubeconfig, cluster ID, ingress public IP |

@@ -23,3 +23,22 @@ provider "openstack" {
 provider "aws" {
   region = var.aws_region
 }
+
+# helm + kubernetes talk to the cluster this stack creates, using the kubeconfig
+# OVH returns for it. Used to install ingress-nginx and read the public IP OVH
+# assigns to its load balancer (see ingress.tf).
+provider "helm" {
+  kubernetes = {
+    host                   = ovh_cloud_project_kube.primary.kubeconfig_attributes[0].host
+    client_certificate     = base64decode(ovh_cloud_project_kube.primary.kubeconfig_attributes[0].client_certificate)
+    client_key             = base64decode(ovh_cloud_project_kube.primary.kubeconfig_attributes[0].client_key)
+    cluster_ca_certificate = base64decode(ovh_cloud_project_kube.primary.kubeconfig_attributes[0].cluster_ca_certificate)
+  }
+}
+
+provider "kubernetes" {
+  host                   = ovh_cloud_project_kube.primary.kubeconfig_attributes[0].host
+  client_certificate     = base64decode(ovh_cloud_project_kube.primary.kubeconfig_attributes[0].client_certificate)
+  client_key             = base64decode(ovh_cloud_project_kube.primary.kubeconfig_attributes[0].client_key)
+  cluster_ca_certificate = base64decode(ovh_cloud_project_kube.primary.kubeconfig_attributes[0].cluster_ca_certificate)
+}

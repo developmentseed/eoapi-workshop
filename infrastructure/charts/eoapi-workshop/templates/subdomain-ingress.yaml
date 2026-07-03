@@ -41,6 +41,15 @@ metadata:
   name: {{ .Release.Name }}-subdomain-ingress
   labels:
     app: {{ .Release.Name }}-subdomain-ingress
+  {{- if or .Values.routing.annotations (and .Values.routing.tls.enabled .Values.routing.tls.clusterIssuer) }}
+  annotations:
+    {{- if and .Values.routing.tls.enabled .Values.routing.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ .Values.routing.tls.clusterIssuer | quote }}
+    {{- end }}
+    {{- with .Values.routing.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
 spec:
   {{- if .Values.routing.className }}
   ingressClassName: {{ .Values.routing.className }}

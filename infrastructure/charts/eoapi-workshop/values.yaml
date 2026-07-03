@@ -32,9 +32,33 @@ routing:
   #   stac. raster. vector. browser. manager. mock-oidc. lab-01..NN.
   baseDomain: "eoapi-workshop.ds.io"
   className: "nginx"
+  # Extra annotations for the subdomain ingress (merged with the cert-manager
+  # one below when TLS is on).
+  annotations: {}
   tls:
+    # HTTPS via cert-manager + Let's Encrypt (HTTP-01). When enabled, the
+    # subdomain ingress is annotated with `cert-manager.io/cluster-issuer:
+    # <clusterIssuer>`, and cert-manager issues one multi-SAN cert (all the
+    # service subdomains) into `secretName`. Requires cert-manager + a matching
+    # ClusterIssuer in the cluster — deploy.sh installs both when TLS is on and
+    # renders templates/cluster-issuer.yaml from the fields below.
+    #
+    # NB: the browser-facing service URLs must also switch to https:// — the
+    # single source of truth for those is deploy.sh's write_overrides, which
+    # keys the scheme off TLS. Enabling this flag alone (without deploy.sh)
+    # leaves those URLs on http.
     enabled: false
     secretName: "eoapi-workshop-tls"
+    # ClusterIssuer name referenced by the ingress annotation and created by
+    # templates/cluster-issuer.yaml (empty string => no issuer annotation and no
+    # ClusterIssuer rendered, e.g. if you manage the issuer out of band).
+    clusterIssuer: "letsencrypt"
+    # Contact email Let's Encrypt uses for expiry notices (required by ACME).
+    email: ""
+    # ACME directory. Default is Let's Encrypt production; swap to staging while
+    # testing to avoid the prod rate limits (staging certs are untrusted):
+    #   https://acme-staging-v02.api.letsencrypt.org/directory
+    acmeServer: "https://acme-v02.api.letsencrypt.org/directory"
 
 # All values are nested under `eoapi:` because eoapi is a subchart.
 eoapi:

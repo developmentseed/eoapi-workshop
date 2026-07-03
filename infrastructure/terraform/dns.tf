@@ -13,5 +13,5 @@ resource "aws_route53_record" "wildcard" {
   name    = var.wildcard_domain
   type    = "A"
   ttl     = var.dns_record_ttl
-  records = [openstack_networking_floatingip_v2.ingress.address]
+  records = [local.ingress_ip]
 }

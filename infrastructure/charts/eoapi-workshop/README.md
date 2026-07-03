@@ -34,8 +34,36 @@ Disabled (unlike upstream `experimental.yaml`): `multidim`, `docServer`,
   defaults to this.
 - **Test-only auth, http by default** — the mock OIDC ships `test-client` /
   `test-secret` and reads are public (`DEFAULT_PUBLIC=true`). STAC Manager (and
-  Browser) *login/editing* needs a secure context, so enable `routing.tls` for
-  HTTPS; over http the UIs are browse/read-only. Not for production.
+  Browser) *login/editing* needs a secure context, so serve over HTTPS (see
+  below); over http the UIs are browse/read-only. Not for production.
+
+## HTTPS / TLS
+
+Run `deploy.sh` with `TLS=1 TLS_EMAIL=<you@your-org.org>` (a **real** address —
+Let's Encrypt rejects `example.com`) to serve everything over
+HTTPS. That renders a Let's Encrypt **ClusterIssuer**
+(`templates/cluster-issuer.yaml`, HTTP-01 via ingress-nginx), annotates the
+subdomain ingress with `cert-manager.io/cluster-issuer`, and switches every
+browser-facing URL to `https://` — cert-manager issues one multi-SAN cert (all
+service subdomains) into `routing.tls.secretName`. HTTP-01 needs no cloud
+credentials; each subdomain is validated over port 80.
+
+**cert-manager** is normally installed by Terraform (cluster platform — see
+`infrastructure/terraform`). If it's absent, `deploy.sh` installs it for you;
+either way `deploy.sh teardown` leaves it (and ingress-nginx) in place.
+
+```bash
+TLS=1 TLS_EMAIL=you@your-org.org ./deploy.sh deploy
+# rate-limited while iterating? use LE staging (untrusted certs):
+TLS=1 TLS_EMAIL=you@your-org.org \
+  ACME_SERVER=https://acme-staging-v02.api.letsencrypt.org/directory ./deploy.sh deploy
+```
+
+First issuance takes ~1–2 min after the release installs; until the cert is
+`Ready`, https serves nginx's default cert. Check with
+`kubectl -n eoapi get certificate,certificaterequest,order`. The relevant
+`routing.tls.*` values (`clusterIssuer`, `email`, `acmeServer`, `secretName`)
+are documented in `values.yaml`; `deploy.sh` sets them from the env vars above.
 
 ## Prerequisites
 
