@@ -17,3 +17,5 @@ jobs:
         run: uv run ruff check
       - name: Format
         run: uv run ruff format --check
+      - name: Check Compose/CDK service versions
+        run: uv run --group deploy --with pyyaml --with packaging python .github/scripts/check_compose_cdk_versions.py

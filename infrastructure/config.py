@@ -37,7 +37,7 @@ class AppConfig(BaseSettings):
         description="ARN of the ACM certificate for *.eoapi.dev or *.{project}.eoapi.dev",
     )
 
-    pgstac_version: str = Field(description="pgstac version", default="0.9.8")
+    pgstac_version: str = Field(description="pgstac version", default="0.9.10")
 
     db_instance_type: str = Field(
         description="Database instance type", default="t4g.small"

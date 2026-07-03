@@ -1,5 +1,28 @@
 version: 2
 updates:
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    cooldown:
+      default-days: 7
+    schedule:
+      interval: "weekly"
+      day: "monday"
+
+  - package-ecosystem: "uv"
+    directory: "/"
+    cooldown:
+      default-days: 7
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    allow:
+      - dependency-name: "eoapi-cdk"
+    groups:
+      cdk:
+        applies-to: version-updates
+        patterns:
+          - "eoapi-cdk"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     cooldown:
