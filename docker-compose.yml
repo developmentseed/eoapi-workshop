@@ -1,6 +1,6 @@
 services:
   database:
-    image: ghcr.io/stac-utils/pgstac:v0.9.8
+    image: ghcr.io/stac-utils/pgstac:v0.9.10
     environment:
       - POSTGRES_USER=username
       - POSTGRES_PASSWORD=password
@@ -56,11 +56,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 120s
 
 
   stac-fastapi:
-    image: ghcr.io/stac-utils/stac-fastapi-pgstac:6.0.2
+    image: ghcr.io/stac-utils/stac-fastapi-pgstac:6.2.2
     ports:
       - 8081:8081
     environment:
@@ -80,21 +80,19 @@ services:
         condition: service_healthy
     command:
       bash -c "uvicorn stac_fastapi.pgstac.app:app --host 0.0.0.0 --port 8081"
-    volumes:
-      - ./dockerfiles/scripts:/tmp/scripts
 
   titiler-pgstac:
     platform: linux/amd64
-    image: ghcr.io/stac-utils/titiler-pgstac:1.9.0
+    image: ghcr.io/stac-utils/titiler-pgstac:3.0.0
     ports:
       - 8082:8082
     environment:
       # Postgres connection
-      - POSTGRES_USER=username
-      - POSTGRES_PASS=password
-      - POSTGRES_DBNAME=postgis
-      - POSTGRES_HOST=database
-      - POSTGRES_PORT=5432
+      - PGUSER=username
+      - PGPASSWORD=password
+      - PGDATABASE=postgis
+      - PGHOST=database
+      - PGPORT=5432
       - DB_MIN_CONN_SIZE=1
       - DB_MAX_CONN_SIZE=10
       # - DB_MAX_QUERIES=10
@@ -112,9 +110,11 @@ services:
       # TiTiler Config
       - MOSAIC_CONCURRENCY=1
       - TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS=True
-      # AWS S3 endpoint config
+      # AWS S3 endpoint config — the workshop's s3:// assets (glad collection)
+      # are in public buckets; read unsigned unless real credentials are provided
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_NO_SIGN_REQUEST=${AWS_NO_SIGN_REQUEST:-YES}
     depends_on:
       database:
         condition: service_started
@@ -124,7 +124,7 @@ services:
       bash -c "uvicorn titiler.pgstac.main:app  --host 0.0.0.0 --port 8082"
 
   tipg:
-    image: ghcr.io/developmentseed/tipg:1.1.2
+    image: ghcr.io/developmentseed/tipg:1.4.0
     ports:
       - 8083:8083
     environment:
