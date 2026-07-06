@@ -112,8 +112,8 @@ services:
       - TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS=True
       # AWS S3 endpoint config — the workshop's s3:// assets (glad collection)
       # are in public buckets; read unsigned unless real credentials are provided
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
       - AWS_NO_SIGN_REQUEST=${AWS_NO_SIGN_REQUEST:-YES}
     depends_on:
       database:
