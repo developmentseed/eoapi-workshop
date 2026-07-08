@@ -1,0 +1,417 @@
+# Minimal, docker-compose-aligned values for the eoAPI workshop.
+#
+# Derived from the upstream `experimental.yaml` profile, trimmed to the
+# components the workshop's docker-compose.yml actually runs:
+#   database (pgstac), stac, raster (titiler), vector (tipg), stac-browser,
+#   stac-auth-proxy + mock-oidc.
+# Everything heavy is OFF: multidim, docServer, eoapi-notifier, knative,
+# monitoring (metrics-server/prometheus/adapter), observability (grafana),
+# and autoscaling.
+#
+# !!! RELEASE-NAME CONTRACT !!!
+# The proxy's OIDC_DISCOVERY_INTERNAL_URL below is hard-pinned to the Service
+# DNS name `eoapi-mock-oidc-server.eoapi.svc.cluster.local`. That name is
+# derived from the Helm *release name* and *namespace*. You MUST install as:
+#     helm install eoapi ./charts/eoapi-workshop -n eoapi --create-namespace
+# Using any other release name or namespace breaks stac-auth-proxy's OIDC
+# discovery. See README.md.
+#
+# !!! SUBDOMAIN-PER-SERVICE ROUTING !!!
+# Every service is exposed at <label>.<baseDomain> (see `routing` below), served
+# at the root of its own subdomain — NOT under a path. This requires a wildcard
+# DNS record `*.<baseDomain>` pointing at the ingress LoadBalancer. The upstream
+# eoapi path-based ingress is disabled; templates/subdomain-ingress.yaml owns all
+# routing. The many subdomain URLs below default to the workshop domain; override
+# them for a different domain with `./deploy.sh` (BASE_DOMAIN=...).
+
+##################################################################
+# ROUTING  (top-level — this chart's own subdomain ingress)
+##################################################################
+routing:
+  # Wildcard base domain. Each service is served at <label>.<baseDomain>:
+  #   stac. raster. vector. browser. manager. mock-oidc. lab-01..NN.
+  baseDomain: "eoapi-workshop.ds.io"
+  className: "nginx"
+  # Extra annotations for the subdomain ingress (merged with the cert-manager
+  # one below when TLS is on).
+  annotations: {}
+  tls:
+    # HTTPS via cert-manager + Let's Encrypt (HTTP-01). When enabled, the
+    # subdomain ingress is annotated with `cert-manager.io/cluster-issuer:
+    # <clusterIssuer>`, and cert-manager issues one multi-SAN cert (all the
+    # service subdomains) into `secretName`. Requires cert-manager + a matching
+    # ClusterIssuer in the cluster — deploy.sh installs both when TLS is on and
+    # renders templates/cluster-issuer.yaml from the fields below.
+    #
+    # NB: the browser-facing service URLs must also switch to https:// — the
+    # single source of truth for those is deploy.sh's write_overrides, which
+    # keys the scheme off TLS. Enabling this flag alone (without deploy.sh)
+    # leaves those URLs on http.
+    enabled: false
+    secretName: "eoapi-workshop-tls"
+    # ClusterIssuer name referenced by the ingress annotation and created by
+    # templates/cluster-issuer.yaml (empty string => no issuer annotation and no
+    # ClusterIssuer rendered, e.g. if you manage the issuer out of band).
+    clusterIssuer: "letsencrypt"
+    # Contact email Let's Encrypt uses for expiry notices (required by ACME).
+    email: ""
+    # ACME directory. Default is Let's Encrypt production; swap to staging while
+    # testing to avoid the prod rate limits (staging certs are untrusted):
+    #   https://acme-staging-v02.api.letsencrypt.org/directory
+    acmeServer: "https://acme-v02.api.letsencrypt.org/directory"
+
+# All values are nested under `eoapi:` because eoapi is a subchart.
+eoapi:
+  ######################
+  # DATABASE (pgstac)
+  ######################
+  postgresql:
+    type: "postgrescluster"
+
+  postgrescluster:
+    enabled: true
+    postgresVersion: 16
+    postGISVersion: "3.4"
+    pgBouncerReplicas: 1
+    monitoring: false
+    instances:
+      - name: eoapi
+        replicas: 1
+        dataVolumeClaimSpec:
+          accessModes:
+            - "ReadWriteOnce"
+          resources:
+            requests:
+              storage: "5Gi"
+        resources: {}
+    users:
+      - name: postgres
+        databases:
+          - eoapi
+          - postgres
+        options: "SUPERUSER"
+      - name: eoapi
+        databases:
+          - eoapi
+          - postgres
+        options: "CREATEDB CREATEROLE"
+        password:
+          type: AlphaNumeric
+
+  ######################
+  # PGSTAC BOOTSTRAP
+  ######################
+  pgstacBootstrap:
+    enabled: true
+    settings:
+      # loadSamples is OFF: the upstream sample collection `noaa-emergency-response`
+      # is stored without a STAC `type` field, which breaks pystac_client
+      # (`get_all_collections()` in notebook 03). The workshop notebooks create
+      # their own collections/items, and docker-compose ships no STAC sample
+      # loader either — so this matches compose.
+      loadSamples: false
+      pgstacSettings:
+        queue_timeout: "10 minutes"
+        use_queue: "false"
+        update_collection_extent: "true"
+      resources: {}
+
+  ######################
+  # CORE API SERVICES
+  ######################
+  stac:
+    enabled: true
+    ingress:
+      # Routing is subdomain-based (templates/subdomain-ingress.yaml), so the
+      # eoapi ingress is off. `path: ""` makes the stac Deployment's
+      # --root-path empty → served at the root of stac.<baseDomain>.
+      enabled: false
+      path: ""
+    autoscaling:
+      enabled: false
+    settings:
+      resources: {}
+      envVars:
+        HOST: "0.0.0.0"
+        PORT: "8080"
+        WEB_CONCURRENCY: "4"
+        ENABLE_TRANSACTIONS_EXTENSIONS: "true"
+        # JSON-array form (matches upstream core.yaml; safest for stac-fastapi).
+        STAC_FASTAPI_CORS_ORIGINS: '["*"]'
+
+  raster:
+    enabled: true
+    ingress:
+      enabled: false          # routed at raster.<baseDomain>; path "" → root-path empty
+      path: ""
+    autoscaling:
+      enabled: false
+    settings:
+      resources: {}
+      envVars:
+        # Notebook 04 §4.4 uses /external/* (needs this flag, as in docker-compose)
+        TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS: "True"
+        # The workshop's s3:// assets (glad collection) live in public buckets;
+        # read them unsigned — no AWS credentials in this deployment.
+        AWS_NO_SIGN_REQUEST: "YES"
+        # GDAL performance settings
+        GDAL_CACHEMAX: "200"
+        GDAL_DISABLE_READDIR_ON_OPEN: "EMPTY_DIR"
+        GDAL_INGESTED_BYTES_AT_OPEN: "32768"
+        GDAL_HTTP_MERGE_CONSECUTIVE_RANGES: "YES"
+        GDAL_HTTP_MULTIPLEX: "YES"
+        GDAL_HTTP_VERSION: "2"
+        PYTHONWARNINGS: "ignore"
+        VSI_CACHE: "TRUE"
+        VSI_CACHE_SIZE: "5000000"
+        # Uvicorn settings
+        HOST: "0.0.0.0"
+        PORT: "8080"
+        WEB_CONCURRENCY: "4"
+
+  vector:
+    enabled: true
+    ingress:
+      enabled: false          # routed at vector.<baseDomain>; path "" → root-path empty
+      path: ""
+    autoscaling:
+      enabled: false
+    settings:
+      resources: {}
+      envVars:
+        TIPG_CATALOG_TTL: "300"
+        # Expose the `features` schema (holds ecoregions, loaded by the
+        # features-loader Job) so notebook 05 can query features.ecoregions —
+        # mirrors the docker-compose tipg `TIPG_DB_SCHEMAS`. `public` is kept too.
+        TIPG_DB_SCHEMAS: '["features", "public"]'
+        HOST: "0.0.0.0"
+        PORT: "8080"
+        WEB_CONCURRENCY: "4"
+
+  ######################
+  # UI: STAC Browser
+  ######################
+  browser:
+    enabled: true
+    # The upstream custom image bakes a /browser pathPrefix, which breaks when
+    # served at a subdomain root. Use the vanilla root-serving radiantearth image
+    # (same as docker-compose) and point it at the stac subdomain.
+    image:
+      name: ghcr.io/radiantearth/stac-browser
+      tag: latest
+    ingress:
+      enabled: false          # routed at browser.<baseDomain> (root)
+      path: "/"
+    settings:
+      resources: {}
+    # Where the browser fetches the catalog from (the stac subdomain).
+    catalogUrl: "http://stac.eoapi-workshop.ds.io"
+    oidcDiscoveryUrl: "http://mock-oidc.eoapi-workshop.ds.io/.well-known/openid-configuration"
+
+  ######################
+  # DISABLED COMPONENTS
+  ######################
+  multidim:
+    enabled: false
+  docServer:
+    enabled: false
+  eoapi-notifier:
+    enabled: false
+  knative:
+    enabled: false
+  monitoring:
+    metricsServer:
+      enabled: false
+    prometheus:
+      enabled: false
+    prometheusAdapter:
+      enabled: false
+  observability:
+    grafana:
+      enabled: false
+  autoscaling:
+    enabled: false
+
+  ######################
+  # INGRESS
+  ######################
+  # The upstream path-based ingress is OFF — all routing is subdomain-based via
+  # templates/subdomain-ingress.yaml (see top-level `routing`). `host` is kept
+  # only for any internal URL defaults the eoapi chart may still compute.
+  ingress:
+    enabled: false
+    className: "nginx"
+    pathType: "Prefix"
+    host: "eoapi-workshop.ds.io"
+    tls:
+      enabled: false
+
+  ######################
+  # AUTH (docker-compose parity)
+  ######################
+  # TEST-ONLY auth. stac-auth-proxy fronts STAC at stac.<baseDomain> (root).
+  # DEFAULT_PUBLIC keeps reads open so the workshop notebooks work without
+  # tokens. DO NOT use this setup in production.
+  stac-auth-proxy:
+    enabled: true
+    image:
+      tag: "v1.1.0"
+    env:
+      # Served at the root of the stac subdomain (no path prefix).
+      ROOT_PATH: ""
+      # Allow unauthenticated reads (workshop notebooks have no token).
+      DEFAULT_PUBLIC: "true"
+      # Upstream STAC API the proxy fronts (in-cluster Service; release=eoapi).
+      UPSTREAM_URL: "http://eoapi-stac:8080"
+      # OIDC discovery — MUST be in-cluster reachable. stac-auth-proxy fetches the
+      # OIDC metadata from OIDC_DISCOVERY_URL and rewrites the jwks_uri to that
+      # same origin, so it fetches JWKS from here too; an external LB URL would
+      # hairpin from the pod and fail (PyJWKClientConnectionError → 401). The
+      # proxy does NOT validate the token issuer, so the mock's external ISSUER
+      # doesn't need to match this URL. Pinned to release/namespace `eoapi`.
+      OIDC_DISCOVERY_URL: "http://eoapi-mock-oidc-server.eoapi.svc.cluster.local:8080/.well-known/openid-configuration"
+      # Used only for the startup readiness wait (same in-cluster URL).
+      OIDC_DISCOVERY_INTERNAL_URL: "http://eoapi-mock-oidc-server.eoapi.svc.cluster.local:8080/.well-known/openid-configuration"
+    # Served at root now → health checks at /healthz.
+    startupProbe:
+      httpGet:
+        path: /healthz
+        port: http
+      periodSeconds: 2
+      failureThreshold: 30
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: http
+      periodSeconds: 60
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: http
+      periodSeconds: 5
+      failureThreshold: 3
+
+  ######################
+  # TESTING: mock OIDC server  (DO NOT USE IN PRODUCTION)
+  ######################
+  testing:
+    mockOidcServer:
+      enabled: true
+      replicaCount: 1
+      image:
+        repository: ghcr.io/alukach/mock-oidc-server
+        tag: latest
+        pullPolicy: IfNotPresent
+      port: 8888
+      clientId: "test-client"
+      clientSecret: "test-secret"
+      extraEnv:
+        - name: ISSUER
+          value: "http://mock-oidc.eoapi-workshop.ds.io"
+        # Extra scopes the server will issue (matches docker-compose), so you
+        # can mint tokens with stac:write to exercise protected transactions.
+        - name: SCOPES
+          value: "stac:read,stac:write"
+      service:
+        type: ClusterIP
+        port: 8080
+      ingress:
+        enabled: false        # routed at mock-oidc.<baseDomain> (root)
+        path: "/"
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
+
+  ######################
+  # MISC
+  ######################
+  service:
+    port: 8080
+  serviceAccount:
+    create: true
+    name: ""
+    automount: true
+  database:
+    enabled: true
+    connectionPooling:
+      enabled: false
+
+##################################################################
+# WORKSHOP JUPYTERLABS  (top-level — this chart's own templates)
+##################################################################
+# One isolated JupyterLab per participant at <name>.<baseDomain> (served at
+# root) and an access token. Notebooks come FRESH from the image on every start;
+# only /home/jovyan/work is a persistent PVC (edits to the provided notebooks
+# reset on restart — save work under work/). COUNT = length of `participants`
+# (default 5). Tokens are filled in by deploy.sh at deploy time and live only
+# in the gitignored .deploy/overrides.yaml — a direct
+# `helm install` (without deploy.sh) leaves tokens empty, i.e. the Labs are
+# UNAUTHENTICATED. Use deploy.sh for any real deployment.
+jupyter:
+  enabled: true
+  image:
+    repository: ghcr.io/developmentseed/eoapi-workshop
+    tag: "latest"
+    pullPolicy: Always          # :latest updates (new notebooks) are picked up on restart
+  storage:
+    size: "2Gi"                 # per-participant PVC mounted at /home/jovyan/work
+  resources:
+    requests: { cpu: "250m", memory: "1Gi" }
+    limits: { cpu: "2", memory: "4Gi" }
+  participants:                 # COUNT = length of this list; tokens set by deploy.sh
+    - { name: lab-01 }
+    - { name: lab-02 }
+    - { name: lab-03 }
+    - { name: lab-04 }
+    - { name: lab-05 }
+
+##################################################################
+# STAC-MANAGER  (subchart — STAC editing UI, EOEPCA-style)
+##################################################################
+# Served at manager.<baseDomain> (root; routed by subdomain-ingress, the app's
+# own ingress is disabled). OIDC is wired to the mock server so editing works —
+# NOTE: browser OIDC (PKCE) needs a secure context, so login/editing requires
+# TLS (https). Over plain http the UI loads and browses read-only.
+stac-manager:
+  enabled: true
+  fullnameOverride: "eoapi-stac-manager"   # pin the Service name for the subdomain route
+  ingress:
+    enabled: false
+  publicUrl:   "http://manager.eoapi-workshop.ds.io"
+  stacApi:     "http://stac.eoapi-workshop.ds.io"
+  stacBrowser: "http://browser.eoapi-workshop.ds.io"
+  appTitle: "eoAPI Workshop STAC Manager"
+  oidc:
+    authority: "http://mock-oidc.eoapi-workshop.ds.io"
+    clientId:  "test-client"
+  resources:                               # the container BUILDS at startup — needs headroom
+    requests: { cpu: "500m", memory: "1Gi" }
+    limits: { cpu: "2", memory: "4Gi" }
+
+##################################################################
+# FEATURES LOADER  (top-level — this chart's own template)
+##################################################################
+# k8s equivalent of the docker-compose `features-loader`: a post-install/upgrade
+# Job that loads the NA CEC Level III Ecoregions shapefile into features.ecoregions
+# so notebook 05 (tipg) has data. Idempotent — skips if the table already exists.
+featuresLoader:
+  enabled: true
+  image: ghcr.io/osgeo/gdal:ubuntu-small-latest
+  shapefileUrl: "/vsizip/vsicurl/https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip/NA_CEC_Eco_Level3.shp"
+  resources:
+    requests: { cpu: "200m", memory: "512Mi" }
+    limits: { cpu: "1", memory: "2Gi" }
+  # STAC data for notebook 04 §4.5: mirror of the 2i2c deploy step that loads a
+  # public collection from the MAAP STAC into pgstac.
+  stac:
+    image: python:3.12-slim
+    source: "https://stac.maap-project.org"
+    collection: "glad-global-forest-change-1.11"
+    itemLimit: 100
+    # keep in lockstep with the pgstac version the eoapi subchart migrates to
+    pypgstacVersion: "0.9.10"

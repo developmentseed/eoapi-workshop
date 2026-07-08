@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is git-ignored.
+
+# --- OVH / OpenStack ---
+region     = "GRA11" # OVH region (UPPERCASE)
+project_id = ""      # OVH public cloud project (tenant) ID
+
+# OVH API token from https://www.ovh.com/auth/api/createToken?GET=/*&POST=/*&PUT=/*&DELETE=/*
+ovh_application_key    = ""
+ovh_application_secret = ""
+ovh_consumer_key       = ""
+
+# OpenStack user (horizon.cloud.ovh.net)
+openstack_username = ""
+openstack_password = ""
+
+# --- Cluster (optional; defaults shown) ---
+# node_flavor = "b3-16"
+# node_count  = 3
+
+# --- DNS (AWS Route53) ---
+# AWS credentials come from the standard AWS chain (env vars / shared config / SSO).
+# route53_zone_name = "ds.io"
+# wildcard_domain   = "*.eoapi-workshop.ds.io"
