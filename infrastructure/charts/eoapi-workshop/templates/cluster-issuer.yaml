@@ -1,0 +1,26 @@
+{{/*
+Let's Encrypt ClusterIssuer using the HTTP-01 solver via ingress-nginx. Rendered
+only when TLS is enabled, a clusterIssuer name is set, and an ACME contact email
+is provided. cert-manager (and its CRDs) must already be installed — deploy.sh
+installs it as a prerequisite when TLS is on.
+
+HTTP-01 validates each service subdomain over port 80 (all are public), so no
+cloud credentials are needed. cert-manager's solver sets ssl-redirect=false on
+the challenge path, so validation still works once http->https redirect is on.
+*/}}
+{{- if and .Values.routing.tls.enabled .Values.routing.tls.clusterIssuer .Values.routing.tls.email }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.routing.tls.clusterIssuer }}
+spec:
+  acme:
+    server: {{ .Values.routing.tls.acmeServer | quote }}
+    email: {{ .Values.routing.tls.email | quote }}
+    privateKeySecretRef:
+      name: {{ .Values.routing.tls.clusterIssuer }}-account-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: {{ .Values.routing.className | quote }}
+{{- end }}

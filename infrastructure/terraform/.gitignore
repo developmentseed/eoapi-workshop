@@ -1,0 +1,12 @@
+# Local state (default backend) — never commit; may contain secrets/kubeconfig
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.tfstate.lock.info
+
+# Variable files hold credentials — keep only the example
+*.tfvars
+!*.tfvars.example
+
+# Written-out kubeconfig from `terraform output`
+kubeconfig.yaml

@@ -1,0 +1,30 @@
+{{- $scheme := ternary "https" "http" .Values.routing.tls.enabled -}}
+eoAPI workshop — release {{ .Release.Name }} in namespace {{ .Release.Namespace }}.
+
+Every service is served at the root of its own subdomain under
+*.{{ .Values.routing.baseDomain }} (requires a wildcard DNS record pointing at
+the ingress LoadBalancer):
+
+  STAC API   {{ $scheme }}://stac.{{ .Values.routing.baseDomain }}
+  Raster     {{ $scheme }}://raster.{{ .Values.routing.baseDomain }}
+  Vector     {{ $scheme }}://vector.{{ .Values.routing.baseDomain }}
+  Browser    {{ $scheme }}://browser.{{ .Values.routing.baseDomain }}
+{{- $sm := index .Values "stac-manager" }}
+{{- if and $sm $sm.enabled }}
+  Manager    {{ $scheme }}://manager.{{ .Values.routing.baseDomain }}
+{{- end }}
+  Mock OIDC  {{ $scheme }}://mock-oidc.{{ .Values.routing.baseDomain }}   (test-only auth)
+
+{{- if .Values.jupyter.enabled }}
+
+Participant JupyterLabs:
+{{- range .Values.jupyter.participants }}
+  {{ .name }}   {{ $scheme }}://{{ .name }}.{{ $.Values.routing.baseDomain }}/lab{{ if .token }}?token={{ .token }}{{ end }}
+{{- end }}
+{{- if not (first .Values.jupyter.participants).token }}
+  (tokens are empty — deploy with ./deploy.sh so each Lab gets an access token)
+{{- end }}
+{{- end }}
+
+Verify endpoints + auth and (re)print the Lab URLs:
+  ./deploy.sh verify
