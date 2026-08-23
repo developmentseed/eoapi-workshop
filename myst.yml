@@ -3,32 +3,30 @@ project:
   id: eoapi-workshop
   title: eoAPI Workshop
   github: https://github.com/developmentseed/eoapi-workshop
-  # ponytail: no build-time execution — readers run cells on the 2i2c binder,
-  # which runs the repo's `start` script and so gets the workshop API endpoints
   thebe:
     binder:
       url: https://binder.opensci.2i2c.cloud
       repo: developmentseed/eoapi-workshop
       ref: main
-  # ponytail: the docker-compose services aren't up during a docs build
   error_rules:
     - rule: link-resolves
       severity: ignore
       keys:
+        # the docker-compose services aren't up during a docs build
         - http://localhost:8081
         - http://localhost:8082
         - http://localhost:8083
         - http://localhost:8085
   toc:
-    - file: 00-introduction.ipynb
-    - file: 01-stac_metadata.ipynb
-    - file: 02-database.ipynb
-    - file: 03-stac_fastapi_pgstac.ipynb
-    - file: 04-titiler_pgstac.ipynb
-    - file: 05-tipg.ipynb
+    - file: docs/00-introduction.ipynb
+    - file: docs/01-stac_metadata.ipynb
+    - file: docs/02-database.ipynb
+    - file: docs/03-stac_fastapi_pgstac.ipynb
+    - file: docs/04-titiler_pgstac.ipynb
+    - file: docs/05-tipg.ipynb
 site:
   template: book-theme
   options:
-    style: ./jupyterbook.css
+    style: ./docs/jupyterbook.css
     logo_text: eoAPI Workshop
-    favicon: media/eoAPI.png
+    favicon: docs/media/eoAPI.png

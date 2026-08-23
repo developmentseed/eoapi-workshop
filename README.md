@@ -104,10 +104,10 @@ If you are interested deploying a production-ready version of the eoAPI stack, y
 ## Rendering the notebooks as a website
 
 [Jupyter Book 2](https://next.jupyterbook.org) builds a site straight from the
-`docs/` notebooks (config: [docs/myst.yml](./docs/myst.yml)). Preview it locally:
+`docs/` notebooks (config: [myst.yml](./myst.yml)). Preview it locally:
 
 ```bash
-cd docs && uv run --with jupyter-book jupyter book start
+uv run --with jupyter-book jupyter book start
 ```
 
 `00-introduction.ipynb` is the home page, since Jupyter Book serves the first
@@ -118,7 +118,7 @@ It can also verify every link in the notebooks (`--strict` exits non-zero, so it
 works as a CI check):
 
 ```bash
-cd docs && uv run --with jupyter-book jupyter book build --html --check-links --strict
+uv run --with jupyter-book jupyter book build --html --check-links --strict
 ```
 
 Pages can run their code cells in the reader's browser: the power button starts
