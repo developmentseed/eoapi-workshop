@@ -114,8 +114,8 @@ uv run --with jupyter-book jupyter book start
 entry in its toc at `/`. Each page's icon row links to the repo, the file's
 GitHub edit view, and a download of that page's notebook.
 
-It can also verify every link in the notebooks (`--strict` exits non-zero, so it
-works as a CI check):
+It also verifies every link in the notebooks, which both the PR check
+([.github/workflows/ci.yml](./.github/workflows/ci.yml)) and the deploy run:
 
 ```bash
 uv run --with jupyter-book jupyter book build --html --check-links --strict
