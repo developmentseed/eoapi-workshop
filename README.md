@@ -100,3 +100,45 @@ This will start up 6 services:
 ## Deploying to AWS
 
 If you are interested deploying a production-ready version of the eoAPI stack, you can deploy the same stack that we used in the in-person workshop to AWS using eoapi-cdk constructs. See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
+
+## Rendering the notebooks as a website
+
+Three site generators are wired up against the same `docs/` notebooks so we can
+compare them. Preview each locally:
+
+```bash
+# MkDocs Material (config: mkdocs.yml) -> site/
+uv run --group docs mkdocs serve
+
+# Quarto (config: docs/_quarto.yml) -> docs/_site/
+uv run --with quarto-cli quarto preview docs
+
+# Jupyter Book 2 / MyST (config: docs/myst.yml) -> docs/_build/html/
+cd docs && uv run --with jupyter-book jupyter book start
+```
+
+`00-introduction.ipynb` is the home page in all three: Jupyter Book serves the
+first entry in its toc at `/`, while MkDocs and Quarto need a literal index, so
+[docs/index.html](./docs/index.html) redirects there.
+
+The Jupyter Book header shows the workshop title (`site.options.logo_text` in
+[docs/myst.yml](./docs/myst.yml)); each page's icon row links to
+the repo, the file's GitHub edit view, and a download of that page's notebook.
+
+Jupyter Book can also verify every link in the notebooks
+(`--strict` exits non-zero, so it works as a CI check):
+
+```bash
+cd docs && uv run --with jupyter-book jupyter book build --html --check-links --strict
+```
+
+Jupyter Book pages can run their code cells in the reader's browser: the power
+button on each page starts a kernel on the 2i2c binder (configured under
+`project.thebe` in [docs/myst.yml](./docs/myst.yml)), which runs this repo's
+[start](./start) script and so gets the workshop API endpoints. Cells that need
+database credentials still prompt for the workshop token.
+
+None of them execute the notebooks at build time: that would need a live eoAPI stack and a
+workshop token, so pages render code cells without outputs.
+
+Only MkDocs is deployed today, by [.github/workflows/docs.yml](.github/workflows/docs.yml).

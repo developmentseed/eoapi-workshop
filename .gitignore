@@ -178,3 +178,7 @@ cdk.context.json
 node_modules/
 
 config.yaml
+site/
+docs/_site/
+docs/_build/
+docs/.quarto/

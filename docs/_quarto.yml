@@ -1,0 +1,43 @@
+project:
+  # ponytail: website, not book — quarto books demand an index.* home page,
+  # and we want 00-introduction.ipynb at the root (see index.html redirect)
+  type: website
+  output-dir: _site
+  render:
+    - "0*.ipynb"
+  resources:
+    - index.html
+    - media/
+    - "!_build/**"
+website:
+  title: "eoAPI Workshop"
+  repo-url: https://github.com/developmentseed/eoapi-workshop
+  repo-actions: [source, issue]
+  page-navigation: true
+  search:
+    location: navbar
+  navbar:
+    title: "eoAPI Workshop"
+    background: light
+  sidebar:
+    style: docked
+    border: true
+    background: light
+    contents:
+      - 00-introduction.ipynb
+      - 01-stac_metadata.ipynb
+      - 02-database.ipynb
+      - 03-stac_fastapi_pgstac.ipynb
+      - 04-titiler_pgstac.ipynb
+      - 05-tipg.ipynb
+format:
+  html:
+    theme:
+      light: [united]
+      dark: [darkly]
+    toc: true
+    toc-title: Contents
+    code-copy: true
+# ponytail: same reason as mkdocs — notebooks need a live stack + workshop token
+execute:
+  enabled: false

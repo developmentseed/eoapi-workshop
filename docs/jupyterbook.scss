@@ -1,0 +1,20 @@
+/*-- scss:defaults --*/
+// ponytail: MyST's book theme is Tailwind-flavored — borrow its stacks/measure,
+// leave colors to cosmo/darkly so light and dark both work
+$font-family-sans-serif: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !default;
+$font-family-monospace: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !default;
+$font-size-root: 16px !default;
+$line-height-base: 1.7 !default;
+$link-color: #2563eb !default; // blue-600
+$headings-font-weight: 600 !default;
+$toc-font-size: 0.85rem !default;
+$sidebar-font-size: 0.95rem !default;
+$sidebar-font-size-section: 0.95rem !default;
+
+/*-- scss:rules --*/
+// JupyterBook keeps a narrow measure, plain headings, and a roomy sidebar
+main.content { max-width: 46rem; }
+h1, h2, h3, h4 { letter-spacing: -0.01em; }
+h2 { border-bottom: none; padding-bottom: 0; }
+#quarto-margin-sidebar .sidebar-section { line-height: 1.4; }
+.sidebar-navigation .sidebar-item { margin-bottom: 0.35rem; }

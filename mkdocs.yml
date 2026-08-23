@@ -1,0 +1,28 @@
+site_name: eoAPI Workshop
+site_url: https://developmentseed.org/eoapi-workshop/
+# ponytail: keeps notebooks' ./media/... paths valid (pages land at site root)
+use_directory_urls: false
+repo_url: https://github.com/developmentseed/eoapi-workshop
+theme:
+  name: material
+  features: [navigation.expand, content.code.copy]
+plugins:
+  - mkdocs-jupyter:
+      include_source: true
+      # ponytail: notebooks need a live eoAPI stack + workshop token, so render as-authored
+      execute: false
+nav:
+  - Introduction: 00-introduction.ipynb
+  - STAC Metadata: 01-stac_metadata.ipynb
+  - Database: 02-database.ipynb
+  - STAC API: 03-stac_fastapi_pgstac.ipynb
+  - Raster API: 04-titiler_pgstac.ipynb
+  - Vector API: 05-tipg.ipynb
+
+exclude_docs: |
+  workshop_setup.py
+  _quarto.yml
+  myst.yml
+  _build/
+  _site/
+  .quarto/
