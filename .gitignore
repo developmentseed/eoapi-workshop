@@ -178,3 +178,4 @@ cdk.context.json
 node_modules/
 
 config.yaml
+docs/_build/
