@@ -126,5 +126,9 @@ a kernel on the 2i2c binder (configured under `project.thebe`), which runs this
 repo's [start](./start) script and so gets the workshop API endpoints. Cells
 that need database credentials still prompt for the workshop token.
 
+Merges to `main` build and publish the site to GitHub Pages
+([.github/workflows/docs.yml](./.github/workflows/docs.yml)) at
+<https://developmentseed.org/eoapi-workshop/>.
+
 The build does not execute notebooks: that would need a live eoAPI stack and a
 workshop token, so pages render code cells without outputs.
