@@ -103,7 +103,7 @@ If you are interested deploying a production-ready version of the eoAPI stack, y
 
 ## Rendering the notebooks as a website
 
-[Jupyter Book 2](https://next.jupyterbook.org) builds a site straight from the
+[Jupyter Book 2](https://jupyterbook.org/) builds a site straight from the
 `docs/` notebooks (config: [myst.yml](./myst.yml)). Preview it locally:
 
 ```bash
