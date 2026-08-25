@@ -100,3 +100,35 @@ This will start up 6 services:
 ## Deploying to AWS
 
 If you are interested deploying a production-ready version of the eoAPI stack, you can deploy the same stack that we used in the in-person workshop to AWS using eoapi-cdk constructs. See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
+
+## Rendering the notebooks as a website
+
+[Jupyter Book 2](https://jupyterbook.org/) builds a site straight from the
+`docs/` notebooks (config: [myst.yml](./myst.yml)). Preview it locally:
+
+```bash
+uv run --with jupyter-book jupyter book start
+```
+
+`00-introduction.ipynb` is the home page, since Jupyter Book serves the first
+entry in its toc at `/`. Each page's icon row links to the repo, the file's
+GitHub edit view, and a download of that page's notebook.
+
+It also verifies every link in the notebooks, which both the PR check
+([.github/workflows/ci.yml](./.github/workflows/ci.yml)) and the deploy run:
+
+```bash
+uv run --with jupyter-book jupyter book build --html --check-links --strict
+```
+
+Pages can run their code cells in the reader's browser: the power button starts
+a kernel on the 2i2c binder (configured under `project.thebe`), which runs this
+repo's [start](./start) script and so gets the workshop API endpoints. Cells
+that need database credentials still prompt for the workshop token.
+
+Merges to `main` build and publish the site to GitHub Pages
+([.github/workflows/docs.yml](./.github/workflows/docs.yml)) at
+<https://developmentseed.org/eoapi-workshop/>.
+
+The build does not execute notebooks: that would need a live eoAPI stack and a
+workshop token, so pages render code cells without outputs.
