@@ -101,6 +101,15 @@ services:
       - OIDC_DISCOVERY_INTERNAL_URL=http://mock-oidc:8888/.well-known/openid-configuration
       - DEFAULT_PUBLIC=true
       - WAIT_FOR_UPSTREAM=true
+      # # Row-level authorization (chapter 7): hide `private-<owner>-*` records from
+      # # everyone but the JWT whose `owner` claim matches.
+      # - ITEMS_FILTER_CLS=workshop_filters:TenantFilter
+      # - ITEMS_FILTER_KWARGS={"field":"collection"}
+      # - COLLECTIONS_FILTER_CLS=workshop_filters:TenantFilter
+      # - COLLECTIONS_FILTER_KWARGS={"field":"id"}
+    volumes:
+      # `PYTHONPATH=/app/src` in the proxy image, so this is importable as-is.
+      - ./docs/workshop_filters.py:/app/src/workshop_filters.py:ro
     depends_on:
       - stac-fastapi
       - mock-oidc
@@ -175,8 +184,17 @@ services:
       - 8080:8080
     environment:
       SB_catalogUrl: "http://localhost:8084"
+      # # Chapter 8: log in against the mock OIDC server. `historyMode` must be
+      # # "history" for OIDC (it is STAC Browser's default), and the redirect URI is
+      # # always <browser origin>/auth -- here http://localhost:8080/auth.
+      # # automaticSilentRenew is off because the mock server issues no refresh tokens.
+      # SB_authConfig: >-
+      #   {"type":"openIdConnect",
+      #   "openIdConnectUrl":"http://localhost:8085/.well-known/openid-configuration",
+      #   "oidcConfig":{"client_id":"stac-browser","automaticSilentRenew":false}}
     depends_on:
       - stac-auth-proxy
+      - mock-oidc
       - database
 
   stac-manager:
