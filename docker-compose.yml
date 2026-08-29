@@ -101,6 +101,16 @@ services:
       - OIDC_DISCOVERY_INTERNAL_URL=http://mock-oidc:8888/.well-known/openid-configuration
       - DEFAULT_PUBLIC=true
       - WAIT_FOR_UPSTREAM=true
+      # Writes require a token carrying the `stac:write` scope, not merely a valid
+      # token. Overrides the proxy's default PRIVATE_ENDPOINTS, which gate the same
+      # paths on authentication alone.
+      - >-
+        PRIVATE_ENDPOINTS={
+        "^/collections$":[["POST","stac:write"]],
+        "^/collections/([^/]+)$":[["PUT","stac:write"],["PATCH","stac:write"],["DELETE","stac:write"]],
+        "^/collections/([^/]+)/items$":[["POST","stac:write"]],
+        "^/collections/([^/]+)/items/([^/]+)$":[["PUT","stac:write"],["PATCH","stac:write"],["DELETE","stac:write"]],
+        "^/collections/([^/]+)/bulk_items$":[["POST","stac:write"]]}
       # # Row-level authorization (chapter 7): hide `private-<owner>-*` records from
       # # everyone but the JWT whose `owner` claim matches.
       # - ITEMS_FILTER_CLS=workshop_filters:TenantFilter
