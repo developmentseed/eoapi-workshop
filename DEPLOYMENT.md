@@ -73,13 +73,14 @@ The easiest way to deploy is using the GitHub Actions workflow, which automatica
    - `HOSTED_ZONE_ID` - **Required** - Route53 hosted zone ID for `eoapi.dev` domain
    - `CERTIFICATE_ARN` - **Required** - ACM certificate ARN for `*.eoapi.dev` wildcard certificate
    - `WORKSHOP_TOKEN` - **Required** - Bearer token for the workshop config Lambda. `config.py` will generate one when this is unset, but the value never reaches you: the deploy's own data-loading step and the **Reset Workshop Data** workflow both authenticate with this variable, so an unset variable means they send an empty token to a Lambda holding a generated one, and a freshly generated token on every deploy
+   - `WORKSHOP_USER_PASSWORD` - Password shared by the Cognito workshop users (optional, auto-generated if not provided — but then it rotates on every deploy)
    - `PGSTAC_VERSION` - pgstac version (optional, defaults to `0.9.8`)
 
 3. **IAM Role Setup**
 
    Your IAM role must:
    - Have a trust relationship allowing GitHub Actions OIDC provider
-   - Have permissions for CDK deployment (CloudFormation, Lambda, RDS, VPC, EC2, Secrets Manager, etc.)
+   - Have permissions for CDK deployment (CloudFormation, Lambda, RDS, VPC, EC2, Secrets Manager, Cognito, etc.)
 
 ### Deploy
 
