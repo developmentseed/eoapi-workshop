@@ -49,6 +49,20 @@ class AppConfig(BaseSettings):
         description="Whether to put the database in a public subnet", default=True
     )
 
+    workshop_users: list[str] = Field(
+        description="Cognito users created for the workshop",
+        default=["alice", "bob"],
+    )
+
+    workshop_user_password: str = Field(
+        description=(
+            "Password shared by the Cognito workshop users. Auto-generated if not "
+            "provided, which means it rotates on every deploy — set it in "
+            "config.yaml to keep it stable."
+        ),
+        default="",
+    )
+
     workshop_token: str = Field(
         description="Bearer token for workshop config Lambda. Auto-generated if not provided.",
         default="",
@@ -62,6 +76,11 @@ class AppConfig(BaseSettings):
     def generate_token(cls, v):
         """Generate a random workshop token if not provided."""
         return v or secrets.token_urlsafe(32)
+
+    @field_validator("workshop_user_password")
+    def generate_password(cls, v):
+        """Generate a random workshop user password if not provided."""
+        return v or secrets.token_urlsafe(16)
 
     def build_service_name(self, service_id: str) -> str:
         return f"{self.project}-{service_id}"

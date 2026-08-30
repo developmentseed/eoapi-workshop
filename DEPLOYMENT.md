@@ -175,10 +175,30 @@ All services are accessible via custom domains following the pattern `{service}.
 - **STAC API**: `https://{PROJECT}-stac.eoapi.dev`
 - **Raster API**: `https://{PROJECT}-raster.eoapi.dev`
 - **Vector API**: `https://{PROJECT}-vector.eoapi.dev`
+- **STAC Auth Proxy**: `https://{PROJECT}-auth.eoapi.dev`
 
 For example, with `PROJECT=eoapi-workshop-dev`:
 - Config: `https://config.eoapi-workshop-dev.eoapi.dev`
 - STAC: `https://stac.eoapi-workshop-dev.eoapi.dev`
+
+### Authentication
+
+`https://{PROJECT}-auth.eoapi.dev` is the STAC Auth Proxy, an authenticated front
+door to the STAC API. Reads are public; writes require a token carrying the
+`stac/write` scope.
+
+Tokens come from a Cognito user pool deployed alongside the stack, standing in for
+the `mock-oidc` container in the local compose stack. It is created with two users,
+`alice` and `bob`, sharing one password. Set `workshop_user_password` in
+`config.yaml` to pin it — left unset, it is regenerated on every deploy.
+
+The pool's discovery URL, client ID, hosted UI, and user password are all
+CloudFormation outputs (`OidcDiscoveryUrl`, `OidcClientId`, `OidcAuthority`,
+`WorkshopUserPassword`) and are also returned by the config Lambda.
+
+Note that Cognito joins the resource server and scope with a `/`, so the deployed
+scopes are `stac/read` and `stac/write` — the local `mock-oidc` container issues
+`stac:read` and `stac:write`.
 
 ### For Organizers
 

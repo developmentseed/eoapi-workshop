@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from aws_cdk import (
@@ -6,9 +7,13 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     Stack,
+    aws_cognito,
     aws_ec2,
     aws_lambda,
     aws_rds,
+)
+from aws_cdk import (
+    custom_resources as cr,
 )
 from aws_cdk import (
     aws_certificatemanager as acm,
@@ -24,6 +29,7 @@ from constructs import Construct
 from eoapi_cdk import (
     PgStacApiLambda,
     PgStacDatabase,
+    StacAuthProxyLambda,
     TiPgApiLambda,
     TitilerPgstacApiLambda,
 )
@@ -298,6 +304,205 @@ class eoAPIStack(Stack):
         )
 
         #######################################################################
+        # Cognito - the workshop's OIDC provider, standing in for the local
+        # mock-oidc container. Throwaway pool: relaxed password policy, no
+        # self-signup, destroyed with the stack.
+        user_pool = aws_cognito.UserPool(
+            self,
+            "user-pool",
+            self_sign_up_enabled=False,
+            sign_in_aliases=aws_cognito.SignInAliases(username=True, email=True),
+            password_policy=aws_cognito.PasswordPolicy(
+                min_length=8,
+                require_uppercase=False,
+                require_digits=False,
+                require_symbols=False,
+            ),
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        # Hosted UI, needed for the authorization code flow the Swagger UI and
+        # STAC Manager use.
+        user_pool_domain = user_pool.add_domain(
+            "user-pool-domain",
+            cognito_domain=aws_cognito.CognitoDomainOptions(
+                domain_prefix=f"{app_config.project}-{self.account}"
+            ),
+        )
+
+        # Cognito joins resource server + scope with a `/`, so these are
+        # `stac/read` and `stac/write` rather than the `stac:read`/`stac:write`
+        # that mock-oidc issues locally.
+        read_scope = aws_cognito.ResourceServerScope(
+            scope_name="read", scope_description="Read STAC metadata"
+        )
+        write_scope = aws_cognito.ResourceServerScope(
+            scope_name="write", scope_description="Write STAC metadata"
+        )
+        resource_server = user_pool.add_resource_server(
+            "resource-server",
+            identifier="stac",
+            scopes=[read_scope, write_scope],
+        )
+        write_scope_name = "stac/write"
+
+        auth_domain_name = f"{app_config.project}-auth.{app_config.domain_name}"
+
+        stac_api_client = user_pool.add_client(
+            "stac-api-client",
+            user_pool_client_name="stac-api",
+            generate_secret=False,
+            o_auth=aws_cognito.OAuthSettings(
+                flows=aws_cognito.OAuthFlows(authorization_code_grant=True),
+                scopes=[
+                    aws_cognito.OAuthScope.OPENID,
+                    aws_cognito.OAuthScope.PROFILE,
+                    aws_cognito.OAuthScope.resource_server(resource_server, read_scope),
+                    aws_cognito.OAuthScope.resource_server(
+                        resource_server, write_scope
+                    ),
+                ],
+                callback_urls=[
+                    f"https://{auth_domain_name}/docs/oauth2-redirect",
+                    "http://localhost:8086",
+                ],
+            ),
+        )
+
+        # Two workshop identities sharing one password. Cognito creates users in
+        # FORCE_CHANGE_PASSWORD, so a follow-up AdminSetUserPassword is what
+        # actually makes them usable.
+        for username in app_config.workshop_users:
+            user = aws_cognito.CfnUserPoolUser(
+                self,
+                f"user-{username}",
+                user_pool_id=user_pool.user_pool_id,
+                username=username,
+                message_action="SUPPRESS",
+                user_attributes=[
+                    aws_cognito.CfnUserPoolUser.AttributeTypeProperty(
+                        name="email", value=f"{username}@example.com"
+                    ),
+                    aws_cognito.CfnUserPoolUser.AttributeTypeProperty(
+                        name="email_verified", value="true"
+                    ),
+                ],
+            )
+
+            set_password = cr.AwsCustomResource(
+                self,
+                f"user-{username}-password",
+                on_update=cr.AwsSdkCall(
+                    service="CognitoIdentityServiceProvider",
+                    action="adminSetUserPassword",
+                    parameters={
+                        "UserPoolId": user_pool.user_pool_id,
+                        "Username": username,
+                        "Password": app_config.workshop_user_password,
+                        "Permanent": True,
+                    },
+                    physical_resource_id=cr.PhysicalResourceId.of(
+                        f"{username}-password"
+                    ),
+                ),
+                policy=cr.AwsCustomResourcePolicy.from_sdk_calls(
+                    resources=[user_pool.user_pool_arn]
+                ),
+            )
+            set_password.node.add_dependency(user)
+
+        oidc_discovery_url = (
+            f"https://cognito-idp.{self.region}.amazonaws.com/"
+            f"{user_pool.user_pool_id}/.well-known/openid-configuration"
+        )
+
+        #######################################################################
+        # STAC Auth Proxy - authenticated front door to the STAC API
+        auth_domain = DomainName(
+            self,
+            "stac-auth-proxy-domain-name",
+            domain_name=auth_domain_name,
+            certificate=certificate,
+        )
+
+        StacAuthProxyLambda(
+            self,
+            "stac-auth-proxy",
+            # execute-api endpoint rather than the custom domain, so the proxy
+            # doesn't depend on DNS records created in this same stack
+            upstream_url=stac_api.url,
+            oidc_discovery_url=oidc_discovery_url,
+            stac_api_client_id=stac_api_client.user_pool_client_id,
+            domain_name=auth_domain,
+            api_env={
+                "DEFAULT_PUBLIC": "true",
+                # Writes require a token carrying the write scope, not merely a
+                # valid token. Mirrors docker-compose.yml.
+                "PRIVATE_ENDPOINTS": json.dumps(
+                    {
+                        r"^/collections$": [["POST", write_scope_name]],
+                        r"^/collections/([^/]+)$": [
+                            ["PUT", write_scope_name],
+                            ["PATCH", write_scope_name],
+                            ["DELETE", write_scope_name],
+                        ],
+                        r"^/collections/([^/]+)/items$": [["POST", write_scope_name]],
+                        r"^/collections/([^/]+)/items/([^/]+)$": [
+                            ["PUT", write_scope_name],
+                            ["PATCH", write_scope_name],
+                            ["DELETE", write_scope_name],
+                        ],
+                        r"^/collections/([^/]+)/bulk_items$": [
+                            ["POST", write_scope_name]
+                        ],
+                    }
+                ),
+            },
+        )
+
+        route53.ARecord(
+            self,
+            "StacAuthProxyDnsRecord",
+            zone=hosted_zone,
+            record_name=f"{app_config.project}-auth",
+            target=route53.RecordTarget.from_alias(
+                ApiGatewayv2DomainProperties(
+                    auth_domain.regional_domain_name,
+                    auth_domain.regional_hosted_zone_id,
+                )
+            ),
+        )
+
+        for name, value, description in [
+            (
+                "StacAuthProxyUrl",
+                f"https://{auth_domain_name}",
+                "Authenticated STAC API endpoint",
+            ),
+            (
+                "OidcDiscoveryUrl",
+                oidc_discovery_url,
+                "OIDC discovery endpoint for the workshop Cognito user pool",
+            ),
+            (
+                "OidcClientId",
+                stac_api_client.user_pool_client_id,
+                "OAuth client ID for the STAC API",
+            ),
+            (
+                "OidcAuthority",
+                user_pool_domain.base_url(),
+                "Cognito hosted UI base URL",
+            ),
+            (
+                "WorkshopUserPassword",
+                app_config.workshop_user_password,
+                f"Password for workshop users: {', '.join(app_config.workshop_users)}",
+            ),
+        ]:
+            CfnOutput(self, name, value=value, description=description)
+
+        #######################################################################
         # Workshop Config Lambda - provides credentials and endpoints to workshop users
         workshop_config_lambda = aws_lambda.Function(
             self,
@@ -314,6 +519,10 @@ class eoAPIStack(Stack):
                 "STAC_API_ENDPOINT": app_config.build_service_url("stac"),
                 "TITILER_PGSTAC_API_ENDPOINT": app_config.build_service_url("raster"),
                 "TIPG_API_ENDPOINT": app_config.build_service_url("vector"),
+                "STAC_AUTH_PROXY_ENDPOINT": f"https://{auth_domain_name}",
+                "OIDC_DISCOVERY_URL": oidc_discovery_url,
+                "OIDC_CLIENT_ID": stac_api_client.user_pool_client_id,
+                "WORKSHOP_USER_PASSWORD": app_config.workshop_user_password,
             },
         )
 
