@@ -86,14 +86,19 @@ cd eoapi-workshop
 docker compose up
 ```
 
-This will start up 6 services:
+This will start up 10 services:
 
 - pgstac: postgres database with pgstac installed, running on port 5439
-- stac-fastapi-pgstac: STAC API available on port 8081
+- stac-fastapi-pgstac: upstream STAC API available directly on port 8081
+- stac-auth-proxy: primary STAC API entry point available on port 8084
+- mock-oidc-server: local test identity provider available on port 8085
 - titiler-pgstac: dynamic tiler available on port 8082
 - tipg: vector feature/tile server available on port 8083
-- stac-browser: beautiful interface for browsing a STAC API available on port 8085
+- stac-browser: beautiful interface for browsing a STAC API available on port 8080
+- stac-manager: web UI for editing STAC metadata via authenticated transactions on port 8086
 - Jupyter Hub: interactive compute environment where you can browse the tutorial materials interactively, available on port 8888
+
+The local STAC API is available at `http://localhost:8084` through stac-auth-proxy. Read operations are public; transaction writes require a bearer token from the mock OIDC server (any username such as `test-user`). See [chapter 3](./docs/03-stac_fastapi_pgstac.ipynb) for read-only STAC API exploration and [chapter 6](./docs/06-stac_transactions_auth.ipynb) for authenticated transactions. [STAC Manager](http://localhost:8086) uses the same API.
 
 4. Open the Jupyter Hub in your web browser at `http://localhost:8888` and go through the tutorials in the `/docs` folder!
 
