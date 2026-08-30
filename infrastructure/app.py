@@ -171,31 +171,22 @@ class eoAPIStack(Stack):
             instance_type=aws_ec2.InstanceType(app_config.db_instance_type),
             removal_policy=RemovalPolicy.DESTROY,
             pgstac_version=app_config.pgstac_version,
+            # Pin the pgbouncer AMI. eoapi-cdk's default is a dated Ubuntu SSM path,
+            # but ours must stay on the image the instance has run since 2025-10-29 --
+            # any change to ImageId replaces the instance, and the replacement's health
+            # check aborts against the still-booting box (eoapi-cdk #255, still open).
+            # This path resolves to ami-00f46ccd1cbfb363e in us-west-2. Bump it
+            # deliberately, never on the rolling `current` alias (eoapi-cdk #234).
+            pgbouncer_ami_ssm_parameter=(
+                "/aws/service/canonical/ubuntu/server/noble/stable/20251022"
+                "/amd64/hvm/ebs-gp3/ami-id"
+            ),
         )
 
         assert pgstac_db.security_group
         pgstac_db.security_group.add_ingress_rule(
             aws_ec2.Peer.any_ipv4(), aws_ec2.Port.tcp(5432)
         )
-
-        # ponytail: pin the pgbouncer AMI to the one the instance is already running.
-        # eoapi-cdk 10.3.0 hardcodes Ubuntu's rolling `.../noble/stable/current/...`
-        # SSM alias, which CloudFormation re-resolves on *every* deploy. Once Canonical
-        # publishes a new Noble AMI, ImageId changes, and ImageId forces replacement --
-        # so any unrelated stack update destroys the pgbouncer instance and re-runs the
-        # health check, which then aborts against a still-booting box (eoapi-cdk #234,
-        # and the unfixed exit-status-2 bug #255).
-        #
-        # Upstream pins the AMI from v11.3.0 via `machineImageSsmParameter`, but every
-        # eoapi-cdk release after 10.3.0 references aws-cdk-lib types (`IKeyRef`,
-        # `IRoleRef`) that no released aws-cdk-lib provides, so we cannot upgrade yet.
-        # Drop this override in favour of `machineImageSsmParameter` once we can.
-        #
-        # ami-00f46ccd1cbfb363e = us-west-2 ubuntu-noble-24.04-amd64-server-20251022,
-        # in use since 2025-10-29. Region-specific: revisit if this stack moves regions.
-        pgstac_db.node.find_child("pgbouncer").node.find_child(
-            "Instance"
-        ).node.default_child.add_property_override("ImageId", "ami-00f46ccd1cbfb363e")
 
         CfnOutput(
             self,
