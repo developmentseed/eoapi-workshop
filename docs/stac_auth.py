@@ -41,10 +41,17 @@ def get_mock_oidc_token(
     username: str = "test-user",
     scopes: str = "openid profile stac:read stac:write",
     *,
+    claims: dict | None = None,
     oidc_endpoint: str | None = None,
     timeout: float = 10.0,
 ) -> str:
-    """Request a bearer token from the mock OIDC server."""
+    """Request a bearer token from the mock OIDC server.
+
+    Args:
+        claims: extra claims to embed in the token, merged over the default `email`
+            claim. Chapter 7 uses this to set the `owner` claim that drives row-level
+            filtering.
+    """
     oidc_endpoint = oidc_endpoint or mock_oidc_endpoint()
     if not oidc_endpoint:
         raise RuntimeError("MOCK_OIDC_ENDPOINT is not configured")
@@ -54,7 +61,9 @@ def get_mock_oidc_token(
         data={
             "username": username,
             "scopes": scopes,
-            "claims": json.dumps({"email": f"{username}@example.com"}),
+            "claims": json.dumps(
+                {"email": f"{username}@example.com", **(claims or {})}
+            ),
         },
         timeout=timeout,
     )
