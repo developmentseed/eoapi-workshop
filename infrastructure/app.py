@@ -444,6 +444,18 @@ class eoAPIStack(Stack):
             oidc_discovery_url=oidc_discovery_url,
             stac_api_client_id=stac_api_client.user_pool_client_id,
             domain_name=auth_domain,
+            # eoapi-cdk 11.6.4's bundled handler calls `app.router.startup()`, which
+            # Starlette removed in 1.0, so the stock proxy raises at import and 500s
+            # on every request. Build the runtime here instead, with the same deps
+            # pinned exactly. Fixed upstream in developmentseed/eoapi-cdk on
+            # `fix/stac-auth-proxy-lifespan`; delete this override and
+            # infrastructure/stac-auth-proxy-runtime/ once that is in a release.
+            lambda_function_options={
+                "code": aws_lambda.Code.from_docker_build(
+                    str(Path(__file__).parent / "stac-auth-proxy-runtime"),
+                ),
+                "handler": "handler.handler",
+            },
             api_env={
                 "DEFAULT_PUBLIC": "true",
                 # Writes require a token carrying the write scope, not merely a
