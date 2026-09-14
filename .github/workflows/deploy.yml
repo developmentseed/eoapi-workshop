@@ -101,9 +101,15 @@ jobs:
 
           echo "✓ Database credentials fetched successfully"
 
-          # Install PostgreSQL client
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          # The runner image already ships PostgreSQL (only the service is disabled), so
+          # psql is normally on PATH. Install only if that stops being true.
+          if command -v psql > /dev/null; then
+            psql --version
+          else
+            echo "psql not on the runner image; installing"
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          fi
 
           echo 'loading North American ecoregions into database'
           psql -c "CREATE SCHEMA IF NOT EXISTS features; DROP TABLE IF EXISTS features.ecoregions;"
