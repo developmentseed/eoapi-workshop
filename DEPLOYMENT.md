@@ -72,7 +72,7 @@ The easiest way to deploy is using the GitHub Actions workflow, which automatica
    - `VPC_ID` - **Required** - VPC ID where resources will be deployed
    - `HOSTED_ZONE_ID` - **Required** - Route53 hosted zone ID for `eoapi.dev` domain
    - `CERTIFICATE_ARN` - **Required** - ACM certificate ARN for `*.eoapi.dev` wildcard certificate
-   - `WORKSHOP_TOKEN` - Bearer token for workshop config (optional, auto-generated if not provided)
+   - `WORKSHOP_TOKEN` - **Required** - Bearer token for the workshop config Lambda. `config.py` will generate one when this is unset, but the value never reaches you: the deploy's own data-loading step and the **Reset Workshop Data** workflow both authenticate with this variable, so an unset variable means they send an empty token to a Lambda holding a generated one, and a freshly generated token on every deploy
    - `PGSTAC_VERSION` - pgstac version (optional, defaults to `0.9.8`)
 
 3. **IAM Role Setup**
@@ -300,3 +300,52 @@ docker run --rm ghcr.io/osgeo/gdal:alpine-small-latest ogr2ogr -f "PostgreSQL" \
 ```
 
 Once loaded, this data persists in the database and is available for all workshop variants.
+
+## Resetting the Workshop Database
+
+Participants create collections as they work through the notebooks, so the catalog
+accumulates between workshops. The **Reset Workshop Data** workflow deletes every STAC
+collection that is not a fixture, returning the catalog to its freshly-deployed state.
+
+A *fixture* is any collection the **CDK Deploy** workflow loads. Everything else is a
+participant's leftover. The keep-list is derived at run time rather than maintained by
+hand — `scripts/fixture_collections.py` discovers collection ids from `data/*.json` and
+`data/*.ndjson`, plus the ids in its `REMOTE_FIXTURES` set for fixtures fetched from a
+remote STAC API. To see the current list:
+
+```bash
+python3 scripts/fixture_collections.py --check
+```
+
+### Running it
+
+Actions → **Reset Workshop Data** → Run workflow:
+
+- **ref** — the branch or tag to use. Use the same one you deployed; see the warning below
+- **environment** — `dev`
+- **mode** — `dry-run` (the default) lists what would be deleted without touching
+  anything; `apply` deletes it
+- **confirm** — required for `apply`: type the `PROJECT` name exactly, or the run fails
+
+Always dry-run first and read the list. Deletion is irreversible; anything a participant
+wants to keep should be exported beforehand.
+
+> [!WARNING]
+> **Run it with the same `ref` you deployed.** The keep-list comes from the checked out
+> `data/` directory, so running from a branch that is missing a fixture file will classify
+> that fixture as a leftover and delete it.
+
+### What it does not touch
+
+- **The stack, database, or credentials.** To tear those down, use **CDK Destroy**. To
+  rotate `WORKSHOP_TOKEN`, see [When to Redeploy the Stack](#when-to-redeploy-the-stack) —
+  update the variable and run **CDK Deploy**. Do that *before* resetting: this workflow
+  authenticates to the config Lambda with `WORKSHOP_TOKEN`, so between changing the
+  variable and deploying, the variable and the Lambda disagree and the run fails.
+- **The `features.ecoregions` table** behind the vector API.
+- **Fixtures themselves.** They are upserted on every **CDK Deploy**, so re-running the
+  deploy restores any fixture that was removed by hand.
+
+Because fixtures are re-upserted on deploy and preserved by the reset, the two workflows
+compose: **Reset Workshop Data** returns the catalog to fixtures only, and **CDK Deploy**
+puts back anything missing.

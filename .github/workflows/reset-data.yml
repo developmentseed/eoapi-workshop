@@ -1,0 +1,149 @@
+name: Reset Workshop Data
+
+# Removes the STAC collections that workshop participants created, leaving only the
+# fixtures that `CDK Deploy` loads. Does not touch the stack, the database itself, or the
+# `features.ecoregions` table -- for those, see `CDK Destroy` and `CDK Deploy`.
+#
+# Defaults to a dry run. Applying requires typing the project name.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or tag to use"
+        required: true
+        default: "main"
+        type: string
+      environment:
+        description: "Deployment environment name"
+        required: true
+        default: "dev"
+        type: string
+      mode:
+        description: "dry-run lists what would be deleted; apply deletes it"
+        required: true
+        default: "dry-run"
+        type: choice
+        options:
+          - dry-run
+          - apply
+      confirm:
+        description: "To apply, type the PROJECT name exactly. Ignored for dry-run."
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Confirm destructive run
+        if: inputs.mode == 'apply'
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          PROJECT: ${{ vars.PROJECT }}
+        run: |
+          if [ "$CONFIRM" != "$PROJECT" ]; then
+            echo "::error::mode=apply requires 'confirm' to be exactly '$PROJECT'."
+            exit 1
+          fi
+          echo "Confirmed: deleting non-fixture collections from '$PROJECT'."
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Reset collections
+        env:
+          MODE: ${{ inputs.mode }}
+          CONFIG_URL: https://${{ vars.PROJECT }}-config.eoapi.dev
+          WORKSHOP_TOKEN: ${{ vars.WORKSHOP_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # A rotated WORKSHOP_TOKEN that has not been deployed yet shows up here as a
+          # 401, because the variable has the new value while the config Lambda still
+          # holds the old one. Say so, rather than failing on a bare curl exit code.
+          if ! CONFIG_RESPONSE=$(curl -sf -H "Authorization: Bearer $WORKSHOP_TOKEN" "$CONFIG_URL"); then
+            echo "::error::Could not read database credentials from $CONFIG_URL. If WORKSHOP_TOKEN was just rotated, run CDK Deploy first so the config Lambda picks up the new value."
+            exit 1
+          fi
+          export PGHOST=$(echo "$CONFIG_RESPONSE" | jq -r '.pghost')
+          export PGPORT=$(echo "$CONFIG_RESPONSE" | jq -r '.pgport')
+          export PGDATABASE=$(echo "$CONFIG_RESPONSE" | jq -r '.pgdatabase')
+          export PGUSER=$(echo "$CONFIG_RESPONSE" | jq -r '.pguser')
+          export PGPASSWORD=$(echo "$CONFIG_RESPONSE" | jq -r '.pgpassword')
+          echo "Connected to $PGDATABASE on $PGHOST"
+
+          # Collections to preserve, discovered from data/ plus the remote fixtures.
+          python3 scripts/fixture_collections.py > /tmp/keep.txt
+          echo "Fixture collections to keep:"
+          sed 's/^/  /' /tmp/keep.txt
+
+          # Anything in the catalog that is not a fixture. Subtracted client-side rather
+          # than with a TEMP table joined in SQL: the database is reached through
+          # pgbouncer in transaction pooling mode, where temp tables leak between pooled
+          # backends and a second run fails with `relation "keep" already exists`.
+          psql -X -Atq -v ON_ERROR_STOP=1 \
+            -c "SELECT id FROM pgstac.collections ORDER BY 1;" > /tmp/all.txt
+          # grep exits 1 when nothing is selected, which is a valid "no strays" result.
+          grep -Fxv -f /tmp/keep.txt /tmp/all.txt > /tmp/strays.txt || true
+
+          COUNT=$(wc -l < /tmp/strays.txt | tr -d ' ')
+          echo "Non-fixture collections: $COUNT"
+          sed 's/^/  /' /tmp/strays.txt
+
+          {
+            echo "## Reset Workshop Data (${MODE})"
+            echo "- fixtures kept: $(wc -l < /tmp/keep.txt | tr -d ' ')"
+            echo "- non-fixture collections found: $COUNT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$MODE" != "apply" ]; then
+            echo "Dry run: nothing deleted. Re-run with mode=apply to delete these."
+            exit 0
+          fi
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "Nothing to delete."
+            exit 0
+          fi
+
+          while IFS= read -r cid; do
+            [ -z "$cid" ] && continue
+            echo "deleting $cid"
+            # Items first: pgstac.delete_collection only removes the collection row, so
+            # do not rely on a cascade to clear the collection's items.
+            psql -X -q -v ON_ERROR_STOP=1 -v cid="$cid" \
+              -c "DELETE FROM pgstac.items WHERE collection = :'cid';"
+            psql -X -q -v ON_ERROR_STOP=1 -v cid="$cid" \
+              -c "SELECT pgstac.delete_collection(:'cid');"
+          done < /tmp/strays.txt
+
+          REMAINING=$(psql -X -Atq -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM pgstac.collections;")
+          ORPHANS=$(psql -X -Atq -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM pgstac.items i
+                 LEFT JOIN pgstac.collections c ON c.id = i.collection
+                WHERE c.id IS NULL;")
+
+          echo "Deleted $COUNT collections. Collections remaining: $REMAINING. Orphaned items: $ORPHANS"
+          {
+            echo "- deleted: $COUNT"
+            echo "- collections remaining: $REMAINING"
+            echo "- orphaned items: $ORPHANS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$ORPHANS" -ne 0 ]; then
+            echo "::warning::$ORPHANS item(s) reference a collection that no longer exists."
+          fi
