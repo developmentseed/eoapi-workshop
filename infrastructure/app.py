@@ -378,6 +378,19 @@ class eoAPIStack(Stack):
                     "http://localhost:8086",
                 ],
             ),
+            # Lets a notebook sign in as alice or bob without a browser redirect, so
+            # chapter 7's read-side demo can run against this deployment and not only
+            # against docker-compose.
+            #
+            # This does not weaken the write protection. Cognito issues
+            # USER_PASSWORD_AUTH tokens with the scope `aws.cognito.signin.user.admin`
+            # and never the custom `stac/*` scopes, so such a token still fails the
+            # scope check in PRIVATE_ENDPOINTS. It carries `username`, which is all the
+            # row-level filter reads.
+            #
+            # `user_srp` is kept because naming any flow replaces Cognito's implicit
+            # defaults, and dropping SRP would be an unintended narrowing.
+            auth_flows=aws_cognito.AuthFlow(user_password=True, user_srp=True),
         )
 
         # Two workshop identities sharing one password. Cognito creates users in
