@@ -10,19 +10,22 @@ the database) and validates single-record reads and all writes against it.
 
 Policy implemented here:
 
-    collections named `private-<tenant>-*` are visible only to a JWT identifying
-    `<tenant>`; every other collection is public.
+    collections named `private-<owner>-*` are visible only to a JWT identifying
+    `<owner>`; every other collection is public.
 
-Which claim names the tenant depends on the identity provider, so it is a parameter:
+Which claim carries the owner differs by identity provider, so it is a parameter. No
+claim is invented for this -- each provider is read via a claim it already issues:
 
-    local (mock-oidc)   `owner`      -- the mock server issues whatever claims we ask for
+    local (mock-oidc)   `owner`      -- the mock server mints whatever claims we ask for,
+                                        and chapter 7 asks for `owner`
     deployed (Cognito)  `username`   -- Cognito access tokens carry `sub`, `username`,
-                                        `scope` and `client_id`, and there is no way to
-                                        add an `owner` claim without a Pre Token
-                                        Generation Lambda
+                                        `scope` and `client_id`
 
-Both are configured the same way, via `..._FILTER_KWARGS` on the proxy; see
-`docker-compose.yml` for local and `infrastructure/app.py` for the deployed stack.
+There is no one claim that works for both: mock-oidc sets `sub` to the username but has
+no `username` claim, while Cognito's `sub` is an opaque UUID.
+
+Configured via `..._FILTER_KWARGS` on the proxy; see `docker-compose.yml` for local and
+`infrastructure/app.py` for the deployed stack.
 """
 
 from __future__ import annotations
@@ -42,13 +45,13 @@ SAFE_OWNER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 @dataclasses.dataclass
 class TenantFilter:
-    """Hide `private-<tenant>-*` records from everyone but that tenant.
+    """Hide `private-<owner>-*` records from everyone but their owner.
 
     Args:
         field: record property holding the collection id. Use `"id"` when filtering
             collections and `"collection"` when filtering items.
-        claim: JWT claim naming the tenant. `"owner"` for the local mock OIDC server,
-            `"username"` for Cognito access tokens in the deployed stack.
+        claim: existing JWT claim that carries the owner. `"owner"` for the local mock
+            OIDC server, `"username"` for Cognito access tokens in the deployed stack.
     """
 
     field: str = "collection"

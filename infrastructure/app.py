@@ -483,13 +483,14 @@ class eoAPIStack(Stack):
                         ],
                     }
                 ),
-                # Row-level authorization (chapter 7). `private-<tenant>-*` records are
-                # visible only to that tenant; everything else is public.
+                # Row-level authorization (chapter 7). `private-<owner>-*` records are
+                # visible only to their owner; everything else is public.
                 #
-                # The claim differs from the local stack: mock-oidc issues an `owner`
-                # claim, while Cognito access tokens carry `username` and cannot add a
-                # custom claim without a Pre Token Generation Lambda. Same filter,
-                # pointed at a different claim.
+                # Read the owner from `username`, a claim Cognito already issues -- no
+                # custom claim, and no Pre Token Generation Lambda. The local stack uses
+                # `owner` instead, which is what mock-oidc mints for chapter 7; there is
+                # no single claim covering both, since mock-oidc has no `username` and
+                # Cognito's `sub` is an opaque UUID.
                 #
                 # Note the upstream STAC API is read-only here -- the transaction
                 # extension is deliberately not enabled, since `{project}-stac` is
