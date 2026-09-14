@@ -9,11 +9,6 @@ name: Reset Workshop Data
 on:
   workflow_dispatch:
     inputs:
-      ref:
-        description: "Branch or tag to use"
-        required: true
-        default: "main"
-        type: string
       environment:
         description: "Deployment environment name"
         required: true
@@ -28,7 +23,7 @@ on:
           - dry-run
           - apply
       confirm:
-        description: "To apply, type the PROJECT name exactly. Ignored for dry-run."
+        description: "To apply, type the PROJECT name (run a dry-run first -- it prints the exact value). Ignored for dry-run."
         required: false
         default: ""
         type: string
@@ -42,10 +37,13 @@ jobs:
     environment: ${{ inputs.environment }}
 
     steps:
+      # Deliberately no `ref` input: this checks out the branch chosen in "Use workflow
+      # from". The keep-list is computed from this checkout's data/ directory, so the
+      # workflow, the script and the fixture files must all come from one place. A `ref`
+      # input lets them diverge -- pointing it at a branch without the fixture files
+      # would classify those fixtures as leftovers and delete them.
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
 
       - name: Confirm destructive run
         if: inputs.mode == 'apply'
@@ -54,7 +52,7 @@ jobs:
           PROJECT: ${{ vars.PROJECT }}
         run: |
           if [ "$CONFIRM" != "$PROJECT" ]; then
-            echo "::error::mode=apply requires 'confirm' to be exactly '$PROJECT'."
+            echo "::error::mode=apply requires 'confirm' to be exactly '$PROJECT' (the PROJECT variable for the '${{ inputs.environment }}' environment, and the prefix of every ${PROJECT}-*.eoapi.dev hostname). Got '$CONFIRM'."
             exit 1
           fi
           echo "Confirmed: deleting non-fixture collections from '$PROJECT'."
@@ -67,6 +65,7 @@ jobs:
       - name: Reset collections
         env:
           MODE: ${{ inputs.mode }}
+          PROJECT: ${{ vars.PROJECT }}
           CONFIG_URL: https://${{ vars.PROJECT }}-config.eoapi.dev
           WORKSHOP_TOKEN: ${{ vars.WORKSHOP_TOKEN }}
         run: |
@@ -111,7 +110,18 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$MODE" != "apply" ]; then
-            echo "Dry run: nothing deleted. Re-run with mode=apply to delete these."
+            # Print the confirmation string, so nobody has to go hunting for the PROJECT
+            # variable to act on a dry run they are already looking at.
+            echo "Dry run: nothing deleted."
+            echo "To delete the $COUNT collection(s) above, re-run this workflow with"
+            echo "  mode    = apply"
+            echo "  confirm = $PROJECT"
+            {
+              echo ""
+              echo "Nothing was deleted. To apply, re-run this workflow with:"
+              echo "- **mode**: \`apply\`"
+              echo "- **confirm**: \`$PROJECT\`"
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
