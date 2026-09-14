@@ -356,7 +356,8 @@ class eoAPIStack(Stack):
         )
         write_scope_name = "stac/write"
 
-        auth_domain_name = f"{app_config.project}-auth.{app_config.domain_name}"
+        auth_subdomain = f"{app_config.project}-protected-stac"
+        auth_domain_name = f"{auth_subdomain}.{app_config.domain_name}"
 
         stac_api_client = user_pool.add_client(
             "stac-api-client",
@@ -486,7 +487,7 @@ class eoAPIStack(Stack):
             self,
             "StacAuthProxyDnsRecord",
             zone=hosted_zone,
-            record_name=f"{app_config.project}-auth",
+            record_name=auth_subdomain,
             target=route53.RecordTarget.from_alias(
                 ApiGatewayv2DomainProperties(
                     auth_domain.regional_domain_name,

@@ -176,7 +176,7 @@ All services are accessible via custom domains following the pattern `{service}.
 - **STAC API**: `https://{PROJECT}-stac.eoapi.dev`
 - **Raster API**: `https://{PROJECT}-raster.eoapi.dev`
 - **Vector API**: `https://{PROJECT}-vector.eoapi.dev`
-- **STAC Auth Proxy**: `https://{PROJECT}-auth.eoapi.dev`
+- **STAC Auth Proxy**: `https://{PROJECT}-protected-stac.eoapi.dev`
 
 For example, with `PROJECT=eoapi-workshop-dev`:
 - Config: `https://config.eoapi-workshop-dev.eoapi.dev`
@@ -184,7 +184,7 @@ For example, with `PROJECT=eoapi-workshop-dev`:
 
 ### Authentication
 
-`https://{PROJECT}-auth.eoapi.dev` is the STAC Auth Proxy, an authenticated front
+`https://{PROJECT}-protected-stac.eoapi.dev` is the STAC Auth Proxy, an authenticated front
 door to the STAC API. Reads are public; writes require a token carrying the
 `stac/write` scope.
 
