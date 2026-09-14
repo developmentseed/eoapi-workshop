@@ -486,23 +486,18 @@ class eoAPIStack(Stack):
                 # Row-level authorization (chapter 7). `private-<owner>-*` records are
                 # visible only to their owner; everything else is public.
                 #
-                # Read the owner from `username`, a claim Cognito already issues -- no
-                # custom claim, and no Pre Token Generation Lambda. The local stack uses
-                # `owner` instead, which is what mock-oidc mints for chapter 7; there is
-                # no single claim covering both, since mock-oidc has no `username` and
-                # Cognito's `sub` is an opaque UUID.
+                # The owner comes from the `username` claim, which TenantFilter defaults
+                # to. Cognito issues it in every access token and the notebooks ask
+                # mock-oidc to mint the same claim, so this configuration is identical to
+                # the one in docker-compose.yml -- no per-environment override.
                 #
                 # Note the upstream STAC API is read-only here -- the transaction
                 # extension is deliberately not enabled, since `{project}-stac` is
                 # public and unauthenticated -- so this filters reads only.
                 "ITEMS_FILTER_CLS": "workshop_filters:TenantFilter",
-                "ITEMS_FILTER_KWARGS": json.dumps(
-                    {"field": "collection", "claim": "username"}
-                ),
+                "ITEMS_FILTER_KWARGS": json.dumps({"field": "collection"}),
                 "COLLECTIONS_FILTER_CLS": "workshop_filters:TenantFilter",
-                "COLLECTIONS_FILTER_KWARGS": json.dumps(
-                    {"field": "id", "claim": "username"}
-                ),
+                "COLLECTIONS_FILTER_KWARGS": json.dumps({"field": "id"}),
             },
         )
 

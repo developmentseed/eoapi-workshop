@@ -13,19 +13,15 @@ Policy implemented here:
     collections named `private-<owner>-*` are visible only to a JWT identifying
     `<owner>`; every other collection is public.
 
-Which claim carries the owner differs by identity provider, so it is a parameter. No
-claim is invented for this -- each provider is read via a claim it already issues:
+The owner is read from the `username` claim, which is the same claim in both
+environments: Cognito puts it in every access token, and the notebooks ask the local mock
+OIDC server to mint it (`get_mock_oidc_token("alice", claims={"username": "alice"})`).
 
-    local (mock-oidc)   `owner`      -- the mock server mints whatever claims we ask for,
-                                        and chapter 7 asks for `owner`
-    deployed (Cognito)  `username`   -- Cognito access tokens carry `sub`, `username`,
-                                        `scope` and `client_id`
+Do not be tempted by `sub`. It is the username on mock-oidc but an opaque UUID on
+Cognito, so it is the one claim that would *not* behave the same in both places.
 
-There is no one claim that works for both: mock-oidc sets `sub` to the username but has
-no `username` claim, while Cognito's `sub` is an opaque UUID.
-
-Configured via `..._FILTER_KWARGS` on the proxy; see `docker-compose.yml` for local and
-`infrastructure/app.py` for the deployed stack.
+The claim name is still a parameter, because another identity provider may carry the
+owner somewhere else -- override it via `..._FILTER_KWARGS` on the proxy.
 """
 
 from __future__ import annotations
@@ -50,12 +46,12 @@ class TenantFilter:
     Args:
         field: record property holding the collection id. Use `"id"` when filtering
             collections and `"collection"` when filtering items.
-        claim: existing JWT claim that carries the owner. `"owner"` for the local mock
-            OIDC server, `"username"` for Cognito access tokens in the deployed stack.
+        claim: JWT claim that carries the owner. `"username"` in both environments;
+            override only for an identity provider that names it differently.
     """
 
     field: str = "collection"
-    claim: str = "owner"
+    claim: str = "username"
 
     async def __call__(self, context: dict[str, Any]) -> dict[str, Any]:
         """Build a CQL2-JSON expression for this request."""
@@ -108,39 +104,34 @@ def demo() -> None:
     assert matches(anon, "sentinel-2-c1-l2a")
     assert not matches(anon, "private-alice-notes")
 
-    alice = ctx(owner="alice")
-    assert matches(alice, "public-demo")
-    assert matches(alice, "private-alice-notes")
-    assert not matches(alice, "private-bob-notes")
+    # A token from the local mock OIDC server, which the notebooks ask for a `username`
+    # claim. A realistic Cognito access token carries the same claim alongside others.
+    for alice in (
+        ctx(username="alice"),
+        ctx(
+            sub="9f6c1e2a-0000-4000-8000-000000000001",
+            username="alice",
+            scope="stac/read stac/write",
+            token_use="access",
+        ),
+    ):
+        assert matches(alice, "public-demo")
+        assert matches(alice, "private-alice-notes")
+        assert not matches(alice, "private-bob-notes")
 
     # A wildcard claim must not widen the pattern into other tenants' collections.
-    attacker = ctx(owner="%")
+    attacker = ctx(username="%")
     assert not matches(attacker, "private-alice-notes")
 
-    # The deployed stack points the filter at Cognito's `username` claim instead,
-    # because Cognito access tokens carry no `owner`. Same policy, different claim.
-    cognito = TenantFilter(field="collection", claim="username")
+    # `sub` is deliberately not the claim: it is the username on mock-oidc but an opaque
+    # UUID on Cognito, so keying on it would behave differently in the two environments.
+    assert not matches(ctx(sub="alice"), "private-alice-notes")
 
-    def cognito_matches(context: dict[str, Any], collection: str) -> bool:
-        expr = Expr(asyncio.run(cognito(context)))
-        expr.validate()
-        return expr.matches({"collection": collection})
-
-    # A realistic Cognito access token payload.
-    cognito_alice = ctx(
-        sub="9f6c1e2a-0000-4000-8000-000000000001",
-        username="alice",
-        scope="stac/read stac/write",
-        token_use="access",
-    )
-    assert cognito_matches(cognito_alice, "public-demo")
-    assert cognito_matches(cognito_alice, "private-alice-notes")
-    assert not cognito_matches(cognito_alice, "private-bob-notes")
-
-    # An `owner`-shaped token is anonymous to the Cognito-configured filter, and a
-    # `username`-shaped one is anonymous to the default -- the claim must match the IdP.
-    assert not cognito_matches(ctx(owner="alice"), "private-alice-notes")
-    assert not matches(ctx(username="alice"), "private-alice-notes")
+    # Overriding the claim still works, for a provider that names it something else.
+    other_idp = TenantFilter(field="collection", claim="preferred_username")
+    expr = Expr(asyncio.run(other_idp(ctx(preferred_username="alice"))))
+    expr.validate()
+    assert expr.matches({"collection": "private-alice-notes"})
 
     print("workshop_filters: all checks passed")
 
