@@ -452,8 +452,11 @@ class eoAPIStack(Stack):
             # `fix/stac-auth-proxy-lifespan`; delete this override and
             # infrastructure/stac-auth-proxy-runtime/ once that is in a release.
             lambda_function_options={
+                # Repo root as context so the Dockerfile can copy in
+                # docs/workshop_filters.py, the same module the compose stack mounts.
                 "code": aws_lambda.Code.from_docker_build(
-                    str(Path(__file__).parent / "stac-auth-proxy-runtime"),
+                    str(Path(__file__).parent.parent),
+                    file="infrastructure/stac-auth-proxy-runtime/Dockerfile",
                 ),
                 "handler": "handler.handler",
             },
@@ -479,6 +482,25 @@ class eoAPIStack(Stack):
                             ["POST", write_scope_name]
                         ],
                     }
+                ),
+                # Row-level authorization (chapter 7). `private-<tenant>-*` records are
+                # visible only to that tenant; everything else is public.
+                #
+                # The claim differs from the local stack: mock-oidc issues an `owner`
+                # claim, while Cognito access tokens carry `username` and cannot add a
+                # custom claim without a Pre Token Generation Lambda. Same filter,
+                # pointed at a different claim.
+                #
+                # Note the upstream STAC API is read-only here -- the transaction
+                # extension is deliberately not enabled, since `{project}-stac` is
+                # public and unauthenticated -- so this filters reads only.
+                "ITEMS_FILTER_CLS": "workshop_filters:TenantFilter",
+                "ITEMS_FILTER_KWARGS": json.dumps(
+                    {"field": "collection", "claim": "username"}
+                ),
+                "COLLECTIONS_FILTER_CLS": "workshop_filters:TenantFilter",
+                "COLLECTIONS_FILTER_KWARGS": json.dumps(
+                    {"field": "id", "claim": "username"}
                 ),
             },
         )

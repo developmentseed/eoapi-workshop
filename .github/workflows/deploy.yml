@@ -144,3 +144,9 @@ jobs:
           uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections data/example-collection.json --method=upsert
           echo 'loading items into pgstac database'
           uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load items data/example-items.ndjson --method=upsert
+
+          # per-tenant collections for the row-level authorization demo (chapter 7).
+          # Seeded here rather than created from the notebook because the deployed STAC
+          # API is read-only -- the transaction extension is deliberately not enabled.
+          echo 'loading tenant collections into pgstac database'
+          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections data/tenant-collections.ndjson --method=upsert

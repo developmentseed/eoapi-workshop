@@ -111,8 +111,10 @@ services:
         "^/collections/([^/]+)/items$":[["POST","stac:write"]],
         "^/collections/([^/]+)/items/([^/]+)$":[["PUT","stac:write"],["PATCH","stac:write"],["DELETE","stac:write"]],
         "^/collections/([^/]+)/bulk_items$":[["POST","stac:write"]]}
-      # # Row-level authorization (chapter 7): hide `private-<owner>-*` records from
-      # # everyone but the JWT whose `owner` claim matches.
+      # # Row-level authorization (chapter 7): hide `private-<tenant>-*` records from
+      # # everyone but the JWT identifying that tenant. The claim defaults to `owner`,
+      # # which mock-oidc issues on request; the deployed stack passes
+      # # `"claim":"username"` instead, since Cognito has no `owner` claim.
       # - ITEMS_FILTER_CLS=workshop_filters:TenantFilter
       # - ITEMS_FILTER_KWARGS={"field":"collection"}
       # - COLLECTIONS_FILTER_CLS=workshop_filters:TenantFilter

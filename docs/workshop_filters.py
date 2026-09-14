@@ -10,8 +10,19 @@ the database) and validates single-record reads and all writes against it.
 
 Policy implemented here:
 
-    collections named `private-<owner>-*` are visible only to a JWT whose `owner`
-    claim is `<owner>`; every other collection is public.
+    collections named `private-<tenant>-*` are visible only to a JWT identifying
+    `<tenant>`; every other collection is public.
+
+Which claim names the tenant depends on the identity provider, so it is a parameter:
+
+    local (mock-oidc)   `owner`      -- the mock server issues whatever claims we ask for
+    deployed (Cognito)  `username`   -- Cognito access tokens carry `sub`, `username`,
+                                        `scope` and `client_id`, and there is no way to
+                                        add an `owner` claim without a Pre Token
+                                        Generation Lambda
+
+Both are configured the same way, via `..._FILTER_KWARGS` on the proxy; see
+`docker-compose.yml` for local and `infrastructure/app.py` for the deployed stack.
 """
 
 from __future__ import annotations
@@ -31,14 +42,17 @@ SAFE_OWNER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 @dataclasses.dataclass
 class TenantFilter:
-    """Hide `private-<owner>-*` records from everyone but their owner.
+    """Hide `private-<tenant>-*` records from everyone but that tenant.
 
     Args:
         field: record property holding the collection id. Use `"id"` when filtering
             collections and `"collection"` when filtering items.
+        claim: JWT claim naming the tenant. `"owner"` for the local mock OIDC server,
+            `"username"` for Cognito access tokens in the deployed stack.
     """
 
     field: str = "collection"
+    claim: str = "owner"
 
     async def __call__(self, context: dict[str, Any]) -> dict[str, Any]:
         """Build a CQL2-JSON expression for this request."""
@@ -47,7 +61,7 @@ class TenantFilter:
             "args": [self._like(f"{PRIVATE_PREFIX}%")],
         }
 
-        owner = (context.get("payload") or {}).get("owner")
+        owner = (context.get("payload") or {}).get(self.claim)
         if not owner or not SAFE_OWNER.match(str(owner)):
             # Anonymous, or a claim we refuse to trust: public records only.
             return not_private
@@ -99,6 +113,31 @@ def demo() -> None:
     # A wildcard claim must not widen the pattern into other tenants' collections.
     attacker = ctx(owner="%")
     assert not matches(attacker, "private-alice-notes")
+
+    # The deployed stack points the filter at Cognito's `username` claim instead,
+    # because Cognito access tokens carry no `owner`. Same policy, different claim.
+    cognito = TenantFilter(field="collection", claim="username")
+
+    def cognito_matches(context: dict[str, Any], collection: str) -> bool:
+        expr = Expr(asyncio.run(cognito(context)))
+        expr.validate()
+        return expr.matches({"collection": collection})
+
+    # A realistic Cognito access token payload.
+    cognito_alice = ctx(
+        sub="9f6c1e2a-0000-4000-8000-000000000001",
+        username="alice",
+        scope="stac/read stac/write",
+        token_use="access",
+    )
+    assert cognito_matches(cognito_alice, "public-demo")
+    assert cognito_matches(cognito_alice, "private-alice-notes")
+    assert not cognito_matches(cognito_alice, "private-bob-notes")
+
+    # An `owner`-shaped token is anonymous to the Cognito-configured filter, and a
+    # `username`-shaped one is anonymous to the default -- the claim must match the IdP.
+    assert not cognito_matches(ctx(owner="alice"), "private-alice-notes")
+    assert not matches(ctx(username="alice"), "private-alice-notes")
 
     print("workshop_filters: all checks passed")
 
