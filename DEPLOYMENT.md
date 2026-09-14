@@ -321,19 +321,24 @@ python3 scripts/fixture_collections.py --check
 
 Actions → **Reset Workshop Data** → Run workflow:
 
-- **ref** — the branch or tag to use. Use the same one you deployed; see the warning below
+- **Use workflow from** — the branch you deployed; see the warning below
 - **environment** — `dev`
 - **mode** — `dry-run` (the default) lists what would be deleted without touching
   anything; `apply` deletes it
-- **confirm** — required for `apply`: type the `PROJECT` name exactly, or the run fails
+- **confirm** — required for `apply`: the `PROJECT` name. **Run a dry-run first — it
+  prints the exact value to type.** It is also the `PROJECT` variable for the environment
+  (Settings → Secrets and variables → Actions → Variables) and the prefix of every
+  `{PROJECT}-*.eoapi.dev` hostname, so for `workshop-stac.eoapi.dev` it is `workshop`
 
 Always dry-run first and read the list. Deletion is irreversible; anything a participant
 wants to keep should be exported beforehand.
 
 > [!WARNING]
-> **Run it with the same `ref` you deployed.** The keep-list comes from the checked out
-> `data/` directory, so running from a branch that is missing a fixture file will classify
-> that fixture as a leftover and delete it.
+> **Select the branch you deployed** in "Use workflow from". There is deliberately no
+> `ref` input: the keep-list is computed from the checked out `data/` directory, so the
+> workflow, the script and the fixture files must all come from one branch. Running it
+> against a branch that is missing a fixture file would classify that fixture as a
+> leftover and delete it.
 
 ### What it does not touch
 
