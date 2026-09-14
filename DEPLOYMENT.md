@@ -72,7 +72,7 @@ The easiest way to deploy is using the GitHub Actions workflow, which automatica
    - `VPC_ID` - **Required** - VPC ID where resources will be deployed
    - `HOSTED_ZONE_ID` - **Required** - Route53 hosted zone ID for `eoapi.dev` domain
    - `CERTIFICATE_ARN` - **Required** - ACM certificate ARN for `*.eoapi.dev` wildcard certificate
-   - `WORKSHOP_TOKEN` - Bearer token for workshop config (optional, auto-generated if not provided)
+   - `WORKSHOP_TOKEN` - **Required** - Bearer token for the workshop config Lambda. `config.py` will generate one when this is unset, but the value never reaches you: the deploy's own data-loading step and the **Reset Workshop Data** workflow both authenticate with this variable, so an unset variable means they send an empty token to a Lambda holding a generated one, and a freshly generated token on every deploy
    - `PGSTAC_VERSION` - pgstac version (optional, defaults to `0.9.8`)
 
 3. **IAM Role Setup**

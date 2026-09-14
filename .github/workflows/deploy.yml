@@ -83,7 +83,15 @@ jobs:
           CONFIG_URL="https://${{ vars.PROJECT }}-config.eoapi.dev"
 
           echo "Fetching database credentials from: $CONFIG_URL"
-          CONFIG_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.WORKSHOP_TOKEN }}" "$CONFIG_URL")
+          # -f so an auth failure surfaces here rather than as a null jq result and a
+          # confusing psql error several lines later. The usual cause is the
+          # WORKSHOP_TOKEN variable disagreeing with the token the config Lambda holds:
+          # either it is unset (config.py then generates one nobody knows) or it was
+          # rotated in the variable without a deploy to carry it through.
+          if ! CONFIG_RESPONSE=$(curl -sf -H "Authorization: Bearer ${{ vars.WORKSHOP_TOKEN }}" "$CONFIG_URL"); then
+            echo "::error::Could not read database credentials from $CONFIG_URL. Check that the WORKSHOP_TOKEN variable is set and matches the deployed config Lambda."
+            exit 1
+          fi
 
           export PGHOST=$(echo "$CONFIG_RESPONSE" | jq -r '.pghost')
           export PGPORT=$(echo "$CONFIG_RESPONSE" | jq -r '.pgport')
