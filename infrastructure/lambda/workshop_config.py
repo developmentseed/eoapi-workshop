@@ -22,6 +22,10 @@ WORKSHOP_TOKEN = os.environ["WORKSHOP_TOKEN"]
 STAC_API_ENDPOINT = os.environ.get("STAC_API_ENDPOINT", "")
 TITILER_PGSTAC_API_ENDPOINT = os.environ.get("TITILER_PGSTAC_API_ENDPOINT", "")
 TIPG_API_ENDPOINT = os.environ.get("TIPG_API_ENDPOINT", "")
+STAC_AUTH_PROXY_ENDPOINT = os.environ.get("STAC_AUTH_PROXY_ENDPOINT", "")
+OIDC_DISCOVERY_URL = os.environ.get("OIDC_DISCOVERY_URL", "")
+OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "")
+WORKSHOP_USER_PASSWORD = os.environ.get("WORKSHOP_USER_PASSWORD", "")
 
 
 def handler(event, context):
@@ -78,6 +82,10 @@ def handler(event, context):
             "stac_api_endpoint": STAC_API_ENDPOINT,
             "titiler_pgstac_api_endpoint": TITILER_PGSTAC_API_ENDPOINT,
             "tipg_api_endpoint": TIPG_API_ENDPOINT,
+            "stac_auth_proxy_endpoint": STAC_AUTH_PROXY_ENDPOINT,
+            "oidc_discovery_url": OIDC_DISCOVERY_URL,
+            "oidc_client_id": OIDC_CLIENT_ID,
+            "workshop_user_password": WORKSHOP_USER_PASSWORD,
         }
 
         return {
