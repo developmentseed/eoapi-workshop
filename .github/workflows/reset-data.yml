@@ -72,7 +72,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          CONFIG_RESPONSE=$(curl -sf -H "Authorization: Bearer $WORKSHOP_TOKEN" "$CONFIG_URL")
+          # A rotated WORKSHOP_TOKEN that has not been deployed yet shows up here as a
+          # 401, because the variable has the new value while the config Lambda still
+          # holds the old one. Say so, rather than failing on a bare curl exit code.
+          if ! CONFIG_RESPONSE=$(curl -sf -H "Authorization: Bearer $WORKSHOP_TOKEN" "$CONFIG_URL"); then
+            echo "::error::Could not read database credentials from $CONFIG_URL. If WORKSHOP_TOKEN was just rotated, run CDK Deploy first so the config Lambda picks up the new value."
+            exit 1
+          fi
           export PGHOST=$(echo "$CONFIG_RESPONSE" | jq -r '.pghost')
           export PGPORT=$(echo "$CONFIG_RESPONSE" | jq -r '.pgport')
           export PGDATABASE=$(echo "$CONFIG_RESPONSE" | jq -r '.pgdatabase')

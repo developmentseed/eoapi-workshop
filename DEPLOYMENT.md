@@ -337,7 +337,11 @@ wants to keep should be exported beforehand.
 
 ### What it does not touch
 
-- **The stack, database, or credentials.** To tear those down, use **CDK Destroy**.
+- **The stack, database, or credentials.** To tear those down, use **CDK Destroy**. To
+  rotate `WORKSHOP_TOKEN`, see [When to Redeploy the Stack](#when-to-redeploy-the-stack) —
+  update the variable and run **CDK Deploy**. Do that *before* resetting: this workflow
+  authenticates to the config Lambda with `WORKSHOP_TOKEN`, so between changing the
+  variable and deploying, the variable and the Lambda disagree and the run fails.
 - **The `features.ecoregions` table** behind the vector API.
 - **Fixtures themselves.** They are upserted on every **CDK Deploy**, so re-running the
   deploy restores any fixture that was removed by hand.
