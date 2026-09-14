@@ -111,14 +111,14 @@ services:
         "^/collections/([^/]+)/items$":[["POST","stac:write"]],
         "^/collections/([^/]+)/items/([^/]+)$":[["PUT","stac:write"],["PATCH","stac:write"],["DELETE","stac:write"]],
         "^/collections/([^/]+)/bulk_items$":[["POST","stac:write"]]}
-      # # Row-level authorization (chapter 7): hide `private-<owner>-*` records from
-      # # everyone but their owner. Which claim carries the owner defaults to `owner`,
-      # # which mock-oidc issues on request; the deployed stack reads Cognito's existing
-      # # `username` claim instead, via `"claim":"username"`.
-      # - ITEMS_FILTER_CLS=workshop_filters:TenantFilter
-      # - ITEMS_FILTER_KWARGS={"field":"collection"}
-      # - COLLECTIONS_FILTER_CLS=workshop_filters:TenantFilter
-      # - COLLECTIONS_FILTER_KWARGS={"field":"id"}
+      # Row-level authorization (chapter 7): hide `private-<owner>-*` records from
+      # everyone but their owner. Which claim carries the owner defaults to `owner`,
+      # which mock-oidc issues on request; the deployed stack reads Cognito's existing
+      # `username` claim instead, via `"claim":"username"`.
+      - ITEMS_FILTER_CLS=workshop_filters:TenantFilter
+      - ITEMS_FILTER_KWARGS={"field":"collection"}
+      - COLLECTIONS_FILTER_CLS=workshop_filters:TenantFilter
+      - COLLECTIONS_FILTER_KWARGS={"field":"id"}
     volumes:
       # `PYTHONPATH=/app/src` in the proxy image, so this is importable as-is.
       - ./docs/workshop_filters.py:/app/src/workshop_filters.py:ro
