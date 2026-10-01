@@ -102,6 +102,10 @@ eoapi:
   ######################
   pgstacBootstrap:
     enabled: true
+    # Same pgstac as docker-compose's database image. The upstream default tag,
+    # v0.10.0, is a stray build of 0.9.10 (same commit), not a newer pgstac.
+    image:
+      tag: v0.9.11
     settings:
       # loadSamples is OFF: the upstream sample collection `noaa-emergency-response`
       # is stored without a STAC `type` field, which breaks pystac_client
@@ -192,12 +196,8 @@ eoapi:
   ######################
   browser:
     enabled: true
-    # The upstream custom image bakes a /browser pathPrefix, which breaks when
-    # served at a subdomain root. Use the vanilla root-serving radiantearth image
-    # (same as docker-compose) and point it at the stac subdomain.
-    image:
-      name: ghcr.io/radiantearth/stac-browser
-      tag: latest
+    # Upstream runs the vanilla radiantearth image (same as docker-compose);
+    # SB_pathPrefix follows ingress.path, so it serves at the subdomain root.
     ingress:
       enabled: false          # routed at browser.<baseDomain> (root)
       path: "/"
@@ -254,7 +254,7 @@ eoapi:
   stac-auth-proxy:
     enabled: true
     image:
-      tag: "v1.2.0"         # what docker-compose's :latest ran at the workshop
+      tag: "v1.2.0"         # same as docker-compose
     env:
       # Served at the root of the stac subdomain (no path prefix).
       ROOT_PATH: ""
@@ -325,10 +325,6 @@ eoapi:
     mockOidcServer:
       enabled: true
       replicaCount: 1
-      image:
-        repository: ghcr.io/alukach/mock-oidc-server
-        tag: latest
-        pullPolicy: IfNotPresent
       port: 8888
       clientId: "test-client"
       clientSecret: "test-secret"
@@ -439,5 +435,5 @@ featuresLoader:
     source: "https://stac.maap-project.org"
     collection: "glad-global-forest-change-1.11"
     itemLimit: 100
-    # keep in lockstep with the pgstac version the eoapi subchart migrates to
-    pypgstacVersion: "0.9.10"
+    # keep in lockstep with eoapi.pgstacBootstrap.image.tag above
+    pypgstacVersion: "0.9.11"

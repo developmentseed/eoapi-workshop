@@ -19,5 +19,5 @@ dependencies:
   - sqlite>=3.32.3
   - pip:
     - haikunator
-    - pypgstac[psycopg]==0.9.8
+    - pypgstac[psycopg]==0.9.11
     - stactools-sentinel2
