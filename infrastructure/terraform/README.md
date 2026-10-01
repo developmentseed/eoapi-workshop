@@ -3,7 +3,9 @@
 Provisions the infrastructure the [`eoapi-workshop` Helm chart](../charts/eoapi-workshop)
 runs on:
 
-- A **3-node `b3-16` OVH Managed Kubernetes** cluster (single fixed-size node pool).
+- A **3-node `b3-16` OVH Managed Kubernetes** cluster (fixed-size `workers`
+  pool), plus an optional `workshop` pool for the event itself (see
+  [Workshop node pool](#workshop-node-pool)).
 - A private network, subnet and router (nodes egress to the internet via the
   router's external gateway).
 - **ingress-nginx** (installed via Helm), whose OVH-provisioned load balancer is
@@ -90,11 +92,12 @@ S3-compatible), then run `terraform init -migrate-state`.
 | `providers.tf`  | `ovh`, `openstack`, `aws`, `helm`, `kubernetes` provider config |
 | `variables.tf`  | Input variables (all defaults documented) |
 | `network.tf`    | Private network, subnet, router |
-| `kube.tf`       | Managed Kubernetes cluster + `b3-16` node pool |
+| `kube.tf`       | Managed Kubernetes cluster + `b3-16` node pool + optional `workshop` pool |
 | `ingress.tf`    | ingress-nginx (Helm) + reads the LB IP OVH assigns |
 | `cert_manager.tf` | cert-manager (Helm) for Let's Encrypt TLS |
 | `dns.tf`        | Route53 wildcard `A` record → the ingress LB IP |
 | `outputs.tf`    | kubeconfig, cluster ID, ingress public IP |
+| `workshop-pool/` | Standalone root: just the `workshop` pool, on any existing OVH cluster |
 
 ## Workshop node pool
 
@@ -115,6 +118,11 @@ put the Labs on them.
   terraform init && terraform apply              # add the pool (~5–10 min)
   terraform destroy                              # remove it after the workshop
   ```
+
+3× `b3-16` costs the same as 6× `b3-8` (OVH prices per resource) but leaves
+more allocatable per node, lets a Lab burst to its 2 CPU limit, and pulls the
+1.8GiB Lab image three times instead of six. Add the pool the day before so the
+image is cached when participants arrive.
 
 Tear the release down (`./deploy.sh teardown`) before removing the pool, or
 the Labs sit `Pending` with nowhere to run.
