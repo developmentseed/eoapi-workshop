@@ -27,7 +27,8 @@
 #                 (HTTP-01), annotate the ingress, and switch every browser-facing
 #                 URL to https. Requires TLS_EMAIL. cert-manager is normally
 #                 installed by Terraform; if absent it's installed here.
-#   TLS_EMAIL     Let's Encrypt contact email (required when TLS=1).
+#   TLS_EMAIL     Let's Encrypt contact email (required when TLS=1, unless
+#                 CLUSTER_ISSUER already exists in the cluster — then it's reused).
 #   CLUSTER_ISSUER  ClusterIssuer name (default: letsencrypt).
 #   ACME_SERVER   ACME directory (default: LE prod; use the staging URL to avoid
 #                 prod rate limits while testing — staging certs are untrusted).
@@ -90,6 +91,13 @@ install_prereqs() {
 # Fail fast on a TLS misconfig before we touch the cluster.
 require_tls_config() {
   [[ "$TLS" == "1" ]] || return 0
+  # A ClusterIssuer of that name already in the cluster (e.g. Terraform's, or a
+  # shared cluster's) is reused, not rendered: the chart can't adopt it, and
+  # owning it would let teardown delete it from under other tenants.
+  if kubectl get clusterissuer "$CLUSTER_ISSUER" >/dev/null 2>&1; then
+    log "ClusterIssuer '$CLUSTER_ISSUER' already exists — reusing it"
+    TLS_EMAIL=""; return 0
+  fi
   if [[ -z "$TLS_EMAIL" ]]; then
     log "TLS=1 requires TLS_EMAIL=<you@your-org.org> (Let's Encrypt contact email)"
     exit 2
@@ -131,6 +139,7 @@ write_overrides() {
       echo "  tls:"
       echo "    enabled: true"
       echo "    clusterIssuer: \"${CLUSTER_ISSUER}\""
+      # No email => templates/cluster-issuer.yaml renders nothing (reused issuer).
       echo "    email: \"${TLS_EMAIL}\""
       echo "    acmeServer: \"${ACME_SERVER}\""
     fi
@@ -289,7 +298,7 @@ case "${1:-deploy}" in
   deploy)   require_tls_config; install_prereqs; deploy_chart; verify ;;
   verify)   verify ;;
   urls)     print_urls ;;
-  overrides) write_overrides; echo "written: ${OVERRIDES}"; cat "$OVERRIDES" ;;
+  overrides) require_tls_config; write_overrides; echo "written: ${OVERRIDES}"; cat "$OVERRIDES" ;;
   teardown) teardown "${2:-}" ;;
   *) echo "Usage: $0 {deploy|verify|urls|teardown [--all]}" >&2; exit 2 ;;
 esac
