@@ -59,9 +59,9 @@ variable "cluster_name" {
 }
 
 variable "kube_version" {
-  description = "Kubernetes minor version for the managed cluster"
+  description = "Kubernetes minor version for the managed cluster (the eoapi chart needs >= 1.32)"
   type        = string
-  default     = "1.31"
+  default     = "1.35"
 }
 
 variable "node_flavor" {

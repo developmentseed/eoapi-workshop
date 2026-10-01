@@ -4,7 +4,7 @@ description: Minimal, docker-compose-aligned eoAPI deployment for the workshop (
 type: application
 version: 0.1.0
 # appVersion tracks the eoAPI application shipped by the eoapi dependency below.
-appVersion: "6.3.1"
+appVersion: "7.0.0"
 icon: https://eoapi.dev/img/eoAPI.png
 home: https://github.com/developmentseed/eoapi-workshop
 sources:
@@ -17,7 +17,7 @@ dependencies:
   # keep them from rendering, so only the workshop services are deployed.
   # NOTE: devseed.com/eoapi-k8s/ 301-redirects to developmentseed.org/eoapi-k8s/.
   - name: eoapi
-    version: 0.13.1
+    version: 0.16.3
     repository: https://developmentseed.org/eoapi-k8s/
   # stac-manager: STAC collection/item editing UI (deployed the EOEPCA way —
   # its published chart). Routed at /manager via the passthrough ingress.

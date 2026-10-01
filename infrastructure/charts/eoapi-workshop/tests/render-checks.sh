@@ -77,7 +77,7 @@ echo "== compose/chart version lockstep =="
 # SAME versions or the notebooks can only be correct in one of them. Assert the
 # rendered chart uses the exact image:tag pinned in docker-compose.yml.
 COMPOSE="${CHART_DIR}/../../../docker-compose.yml"
-for svc in titiler-pgstac tipg stac-fastapi-pgstac; do
+for svc in titiler-pgstac tipg stac-fastapi-pgstac stac-browser; do
   img=$(grep -oE "image: \S*/${svc}:\S+" "$COMPOSE" | head -1 | awk '{print $2}')
   check_has "$ALL" "$(sed 's/[.[]/\\&/g' <<<"$img")" "chart runs compose's ${img##*/}"
 done
@@ -90,7 +90,7 @@ echo "== auth wiring =="
 # sets it external, this in-cluster value line disappears and the check fails.
 check_has "$ALL" 'value: "http://eoapi-mock-oidc-server:8080/\.well-known/openid-configuration"' "proxy OIDC_DISCOVERY_URL is in-cluster (JWKS reachable)"
 check_absent "$ALL" '\.svc\.cluster\.local' "no namespace-qualified Service DNS"
-check_has "$ALL" 'stac-auth-proxy:v1\.2\.0' "proxy on v1.2.0 (what compose ran at the workshop)"
+check_has "$ALL" 'stac-auth-proxy:v1\.2\.0' "proxy on v1.2.0 (same as compose)"
 check_has "$ALL" 'name: PRIVATE_ENDPOINTS' "writes need the stac:write scope (compose parity)"
 check_count "$ALL" 'value: "workshop_filters:TenantFilter"' 2 "row-level filters on items + collections"
 check_has "$ALL" 'mountPath: /app/src/workshop_filters\.py' "filters module mounted into the proxy"
@@ -112,7 +112,8 @@ check_has    "$FA" 'features\.ecoregions'          "loader targets features.ecor
 check_has    "$FA" 'name: eoapi-pguser-postgres'   "loader uses the superuser secret"
 check_has    "$FA" 'TIPG_DB_SCHEMAS'               "tipg exposes the features schema"
 check_has    "$FA" 'glad-global-forest-change-1\.11' "loader ingests the glad STAC collection (notebook 04 §4.5)"
-check_has    "$FA" 'pypgstac\[psycopg\]==0\.9\.10' "pypgstac pinned to the deployed pgstac version"
+check_has    "$FA" 'pgstac-pypgstac:v0\.9\.11' "pgstac bootstrap on compose's v0.9.11, not the chart's stray v0.10.0"
+check_has    "$FA" 'pypgstac\[psycopg\]==0\.9\.11' "pypgstac pinned to the deployed pgstac version"
 FA_OFF="$(helm template "$REL" "$CHART_DIR" -n "$NS" --set featuresLoader.enabled=false 2>/dev/null)"
 check_absent "$FA_OFF" 'name: eoapi-features-loader' "featuresLoader.enabled=false renders nothing"
 
