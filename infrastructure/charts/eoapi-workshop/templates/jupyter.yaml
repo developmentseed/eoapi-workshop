@@ -61,6 +61,10 @@ spec:
       labels:
         app: {{ $root.Release.Name }}-{{ $name }}
     spec:
+      {{- with $j.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         fsGroup: 1000          # jovyan GID — makes the work PVC writable by the notebook user
       # Notebooks live in the image at /home/jovyan/docs and come FRESH on every

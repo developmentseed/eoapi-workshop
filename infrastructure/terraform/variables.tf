@@ -76,6 +76,18 @@ variable "node_count" {
   default     = 3
 }
 
+variable "workshop_node_count" {
+  description = "Nodes in the extra `workshop` pool (0 = no pool). 3× b3-16 ≈ 20 participants."
+  type        = number
+  default     = 0
+}
+
+variable "workshop_node_flavor" {
+  description = "OVH flavor for the workshop pool's nodes"
+  type        = string
+  default     = "b3-16"
+}
+
 variable "ingress_nginx_chart_version" {
   description = "ingress-nginx Helm chart version to install. Empty string installs the latest; pin for reproducibility."
   type        = string

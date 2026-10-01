@@ -16,6 +16,7 @@ openstack_password = ""
 # --- Cluster (optional; defaults shown) ---
 # node_flavor = "b3-16"
 # node_count  = 3
+# workshop_node_count = 3   # extra `workshop` pool for the event; 0 removes it
 
 # --- DNS (AWS Route53) ---
 # AWS credentials come from the standard AWS chain (env vars / shared config / SSO).

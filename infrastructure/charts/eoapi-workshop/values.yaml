@@ -391,6 +391,10 @@ jupyter:
     requests: { cpu: "250m", memory: "1Gi" }
     limits: { cpu: "2", memory: "4Gi" }
   count: 5                      # Labs lab-01..lab-NN; each requests the resources above
+  # Pin the Labs to a node pool, e.g. { nodepool: workshop } for the pool from
+  # infrastructure/terraform (workshop_node_count, or workshop-pool/). Empty =
+  # any node. The eoAPI backend is small and stays wherever it lands.
+  nodeSelector: {}
   tokens: {}                    # { lab-01: "<token>", ... } — set by deploy.sh
 
 ##################################################################

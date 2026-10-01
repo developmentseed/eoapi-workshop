@@ -95,3 +95,26 @@ S3-compatible), then run `terraform init -migrate-state`.
 | `cert_manager.tf` | cert-manager (Helm) for Let's Encrypt TLS |
 | `dns.tf`        | Route53 wildcard `A` record → the ingress LB IP |
 | `outputs.tf`    | kubeconfig, cluster ID, ingress public IP |
+
+## Workshop node pool
+
+Extra nodes for the event itself (3× `b3-16` ≈ 20 participants), added before
+and removed after. Nodes are labelled `nodepool=workshop`; set
+`jupyter.nodeSelector: { nodepool: workshop }` in the chart's `values.yaml` to
+put the Labs on them.
+
+- **Cluster created by this stack:** set `workshop_node_count = 3` in
+  `terraform.tfvars` and `terraform apply`; set it back to `0` and apply to
+  remove the pool.
+- **Any other existing OVH cluster:** use the standalone `workshop-pool/` root,
+  which manages only the pool (OVH API token + the cluster's ID):
+
+  ```bash
+  cd workshop-pool
+  cp terraform.tfvars.example terraform.tfvars   # project_id, kube_id, OVH API keys
+  terraform init && terraform apply              # add the pool (~5–10 min)
+  terraform destroy                              # remove it after the workshop
+  ```
+
+Tear the release down (`./deploy.sh teardown`) before removing the pool, or
+the Labs sit `Pending` with nowhere to run.

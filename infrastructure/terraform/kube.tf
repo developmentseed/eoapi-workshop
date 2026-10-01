@@ -29,3 +29,20 @@ resource "ovh_cloud_project_kube_nodepool" "workers" {
   min_nodes     = var.node_count
   max_nodes     = var.node_count
 }
+
+# Extra capacity for the workshop itself, on top of `workers`. Off by default;
+# set workshop_node_count (e.g. 3 for ~20 participants) before the workshop and
+# back to 0 after. Nodes are labelled nodepool=workshop, which the chart's
+# `jupyter.nodeSelector` targets. (workshop-pool/ does the same for a cluster
+# this stack didn't create.)
+resource "ovh_cloud_project_kube_nodepool" "workshop" {
+  count         = var.workshop_node_count > 0 ? 1 : 0
+  service_name  = var.project_id
+  kube_id       = ovh_cloud_project_kube.primary.id
+  name          = "workshop"
+  flavor_name   = var.workshop_node_flavor
+  autoscale     = false
+  desired_nodes = var.workshop_node_count
+  min_nodes     = var.workshop_node_count
+  max_nodes     = var.workshop_node_count
+}
