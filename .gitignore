@@ -178,8 +178,8 @@ cdk.context.json
 node_modules/
 
 config.yaml
+_build/
 
-# Helm: pulled chart dependencies (rebuilt with `helm dependency update`).
-# Chart.lock IS tracked for reproducible builds.
-charts/*/charts/
-charts/**/*.tgz
+# Local cluster credentials
+kubeconfig.yaml
+kubeconfig.yml

@@ -25,24 +25,24 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Configure AWS credentials
         id: aws-creds
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{  vars.DEPLOY_IAM_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -83,7 +83,15 @@ jobs:
           CONFIG_URL="https://${{ vars.PROJECT }}-config.eoapi.dev"
 
           echo "Fetching database credentials from: $CONFIG_URL"
-          CONFIG_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.WORKSHOP_TOKEN }}" "$CONFIG_URL")
+          # -f so an auth failure surfaces here rather than as a null jq result and a
+          # confusing psql error several lines later. The usual cause is the
+          # WORKSHOP_TOKEN variable disagreeing with the token the config Lambda holds:
+          # either it is unset (config.py then generates one nobody knows) or it was
+          # rotated in the variable without a deploy to carry it through.
+          if ! CONFIG_RESPONSE=$(curl -sf -H "Authorization: Bearer ${{ vars.WORKSHOP_TOKEN }}" "$CONFIG_URL"); then
+            echo "::error::Could not read database credentials from $CONFIG_URL. Check that the WORKSHOP_TOKEN variable is set and matches the deployed config Lambda."
+            exit 1
+          fi
 
           export PGHOST=$(echo "$CONFIG_RESPONSE" | jq -r '.pghost')
           export PGPORT=$(echo "$CONFIG_RESPONSE" | jq -r '.pgport')
@@ -93,9 +101,15 @@ jobs:
 
           echo "✓ Database credentials fetched successfully"
 
-          # Install PostgreSQL client
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          # The runner image already ships PostgreSQL (only the service is disabled), so
+          # psql is normally on PATH. Install only if that stops being true.
+          if command -v psql > /dev/null; then
+            psql --version
+          else
+            echo "psql not on the runner image; installing"
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          fi
 
           echo 'loading North American ecoregions into database'
           psql -c "CREATE SCHEMA IF NOT EXISTS features; DROP TABLE IF EXISTS features.ecoregions;"
@@ -110,7 +124,7 @@ jobs:
             -t_srs EPSG:4326 \
             -simplify 100
 
-          # load a STAC collection
+          # load a STAC collection from MAAP
           echo 'fetching collection from MAAP STAC'
           curl https://stac.maap-project.org/collections/glad-global-forest-change-1.11 > /tmp/collection.json
 
@@ -122,3 +136,9 @@ jobs:
           uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections /tmp/collection.json --method=upsert
           echo 'loading items into pgstac database'
           uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load items /tmp/items.ndjson --method=upsert
+          
+          # load an example STAC collection for use in the website
+          echo 'loading collection into pgstac database'
+          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load collections data/example-collection.json --method=upsert
+          echo 'loading items into pgstac database'
+          uvx --from pypgstac[psycopg]==${{ vars.PGSTAC_VERSION }} pypgstac load items data/example-items.ndjson --method=upsert

@@ -86,17 +86,54 @@ cd eoapi-workshop
 docker compose up
 ```
 
-This will start up 6 services:
+This will start up 10 services:
 
 - pgstac: postgres database with pgstac installed, running on port 5439
-- stac-fastapi-pgstac: STAC API available on port 8081
+- stac-fastapi-pgstac: upstream STAC API available directly on port 8081
+- stac-auth-proxy: primary STAC API entry point available on port 8084
+- mock-oidc-server: local test identity provider available on port 8085
 - titiler-pgstac: dynamic tiler available on port 8082
 - tipg: vector feature/tile server available on port 8083
-- stac-browser: beautiful interface for browsing a STAC API available on port 8085
+- stac-browser: beautiful interface for browsing a STAC API available on port 8080
+- stac-manager: web UI for editing STAC metadata via authenticated transactions on port 8086
 - Jupyter Hub: interactive compute environment where you can browse the tutorial materials interactively, available on port 8888
+
+The local STAC API is available at `http://localhost:8084` through stac-auth-proxy. Read operations are public; transaction writes require a bearer token from the mock OIDC server (any username such as `test-user`). See [chapter 3](./docs/03-stac_fastapi_pgstac.ipynb) for read-only STAC API exploration and [chapter 6](./docs/06-stac_transactions_auth.ipynb) for authenticated transactions. [STAC Manager](http://localhost:8086) uses the same API.
 
 4. Open the Jupyter Hub in your web browser at `http://localhost:8888` and go through the tutorials in the `/docs` folder!
 
 ## Deploying to AWS
 
 If you are interested deploying a production-ready version of the eoAPI stack, you can deploy the same stack that we used in the in-person workshop to AWS using eoapi-cdk constructs. See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
+
+## Rendering the notebooks as a website
+
+[Jupyter Book 2](https://jupyterbook.org/) builds a site straight from the
+`docs/` notebooks (config: [myst.yml](./myst.yml)). Preview it locally:
+
+```bash
+uv run --with jupyter-book jupyter book start
+```
+
+`00-introduction.ipynb` is the home page, since Jupyter Book serves the first
+entry in its toc at `/`. Each page's icon row links to the repo, the file's
+GitHub edit view, and a download of that page's notebook.
+
+It also verifies every link in the notebooks, which both the PR check
+([.github/workflows/ci.yml](./.github/workflows/ci.yml)) and the deploy run:
+
+```bash
+uv run --with jupyter-book jupyter book build --html --check-links --strict
+```
+
+Pages can run their code cells in the reader's browser: the power button starts
+a kernel on the 2i2c binder (configured under `project.thebe`), which runs this
+repo's [start](./start) script and so gets the workshop API endpoints. Cells
+that need database credentials still prompt for the workshop token.
+
+Merges to `main` build and publish the site to GitHub Pages
+([.github/workflows/docs.yml](./.github/workflows/docs.yml)) at
+<https://developmentseed.org/eoapi-workshop/>.
+
+The build does not execute notebooks: that would need a live eoAPI stack and a
+workshop token, so pages render code cells without outputs.

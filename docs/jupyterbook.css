@@ -1,0 +1,20 @@
+/* notebooks use Jupyter's <div class="alert alert-warning"> so they still look right in
+   JupyterLab; MyST is Tailwind-based, so give those divs admonition styling here rather
+   than rewriting the cells in MyST-only syntax. */
+.alert {
+  border-radius: 0.375rem;
+  border-left: 4px solid #94a3b8;
+  background: #f1f5f9;
+  padding: 0.75rem 1rem;
+  margin: 1.25rem 0;
+}
+.alert-warning { border-left-color: #f59e0b; background: #fffbeb; }
+.alert-info { border-left-color: #3b82f6; background: #eff6ff; }
+.alert-success { border-left-color: #22c55e; background: #f0fdf4; }
+.alert-danger { border-left-color: #ef4444; background: #fef2f2; }
+
+html.dark .alert { background: #1e293b; }
+html.dark .alert-warning { background: #2a2113; }
+html.dark .alert-info { background: #172033; }
+html.dark .alert-success { background: #14251b; }
+html.dark .alert-danger { background: #2a1717; }
