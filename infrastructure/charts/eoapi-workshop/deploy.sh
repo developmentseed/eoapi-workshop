@@ -18,7 +18,7 @@
 #
 # Env:
 #   RELEASE       Helm release name   (default: eoapi)   -- see OIDC contract below
-#   NAMESPACE     target namespace    (default: eoapi)   -- see OIDC contract below
+#   NAMESPACE     target namespace    (default: eoapi)
 #   BASE_DOMAIN   wildcard base domain (default: eoapi-workshop.ds.io)
 #   HELM_TIMEOUT  helm --timeout for the release install (default: 15m). The
 #                 pgstac post-install hooks wait for the PGO-provisioned DB,
@@ -36,9 +36,9 @@
 #                  cluster can pull a PRIVATE workshop image (with GHCR_USER).
 #                  Omit if the GHCR package is public.
 #
-# !!! OIDC CONTRACT !!! The proxy's OIDC_DISCOVERY_INTERNAL_URL is pinned to the
-# Service DNS name eoapi-mock-oidc-server.eoapi.svc.cluster.local, derived from
-# RELEASE + NAMESPACE. Both MUST stay "eoapi" or in-cluster OIDC discovery breaks.
+# !!! OIDC CONTRACT !!! The proxy's OIDC_DISCOVERY_URL is pinned to the Service
+# name eoapi-mock-oidc-server, derived from RELEASE. RELEASE MUST stay "eoapi" or
+# in-cluster OIDC discovery breaks. NAMESPACE is free.
 set -euo pipefail
 
 RELEASE="${RELEASE:-eoapi}"

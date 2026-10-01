@@ -29,9 +29,9 @@ Disabled (unlike upstream `experimental.yaml`): `multidim`, `docServer`,
 
 - **Wildcard DNS required** — `*.<baseDomain>` must A-record to the ingress
   LoadBalancer IP (check: `dig +short stac.eoapi-workshop.ds.io`).
-- **Release name and namespace must both be `eoapi`** — the proxy's in-cluster
-  OIDC URL (`eoapi-mock-oidc-server.eoapi.svc…`) is derived from them. `deploy.sh`
-  defaults to this.
+- **Release name must be `eoapi`** — the proxy's in-cluster OIDC URL
+  (`eoapi-mock-oidc-server`) and other Service names are derived from it. Any
+  namespace works (`NAMESPACE=…`; examples below use the default `eoapi`).
 - **Test-only auth, http by default** — the mock OIDC ships `test-client` /
   `test-secret` and reads are public (`DEFAULT_PUBLIC=true`). STAC Manager (and
   Browser) *login/editing* needs a secure context, so serve over HTTPS (see
@@ -88,8 +88,8 @@ cd infrastructure/charts/eoapi-workshop
 
 Env vars: `BASE_DOMAIN` (default `eoapi-workshop.ds.io`), `SKIP_PREREQS=1`,
 `GHCR_USER`+`GHCR_TOKEN` (pull secret for a private image — see
-[Participant JupyterLabs](#participant-jupyterlabs)). `RELEASE`/`NAMESPACE` must
-stay `eoapi`.
+[Participant JupyterLabs](#participant-jupyterlabs)). `RELEASE` must stay `eoapi`;
+`NAMESPACE` (default `eoapi`) is free.
 
 The pgstac DB is created asynchronously by PGO and seeded with sample STAC data,
 so API pods may restart a few times before `Ready` on first install.
@@ -155,7 +155,7 @@ curl -s -o/dev/null -w '%{http_code}\n' -X POST http://stac.$b/collections \
 ```
 
 **401 without a token, non-401 with one** = working. If it stays 401, check
-`kubectl -n eoapi logs deploy/eoapi-stac-auth-proxy` (usual cause: release/namespace
+`kubectl -n eoapi logs deploy/eoapi-stac-auth-proxy` (usual cause: release
 not `eoapi`).
 
 ## Upgrade / uninstall

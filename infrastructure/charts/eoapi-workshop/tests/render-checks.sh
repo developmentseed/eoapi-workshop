@@ -10,7 +10,8 @@ set -uo pipefail
 
 CHART_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REL=eoapi
-NS=eoapi
+# Not "eoapi": proves nothing depends on the namespace.
+NS=workshop-test
 fail=0
 
 # Render a single template file in isolation (keeps assertions unambiguous).
@@ -78,7 +79,14 @@ echo "== auth wiring =="
 # The proxy fetches JWKS from OIDC_DISCOVERY_URL's origin, so it MUST be the
 # in-cluster URL — an external LB URL hairpins from the pod (401). If someone
 # sets it external, this in-cluster value line disappears and the check fails.
-check_has "$ALL" 'value: "http://eoapi-mock-oidc-server\.eoapi\.svc\.cluster\.local:8080/\.well-known/openid-configuration"' "proxy OIDC_DISCOVERY_URL is in-cluster (JWKS reachable)"
+check_has "$ALL" 'value: "http://eoapi-mock-oidc-server:8080/\.well-known/openid-configuration"' "proxy OIDC_DISCOVERY_URL is in-cluster (JWKS reachable)"
+check_absent "$ALL" '\.svc\.cluster\.local' "no namespace-qualified Service DNS"
+check_has "$ALL" 'stac-auth-proxy:v1\.2\.0' "proxy on v1.2.0 (what compose ran at the workshop)"
+check_has "$ALL" 'name: PRIVATE_ENDPOINTS' "writes need the stac:write scope (compose parity)"
+check_count "$ALL" 'value: "workshop_filters:TenantFilter"' 2 "row-level filters on items + collections"
+check_has "$ALL" 'mountPath: /app/src/workshop_filters\.py' "filters module mounted into the proxy"
+F="$(show templates/stac-auth-proxy-filters.yaml)"
+check_has "$F" 'class TenantFilter' "workshop-filters ConfigMap carries docs/workshop_filters.py"
 
 echo "== Subdomain ingress (templates/subdomain-ingress.yaml) =="
 I="$(show templates/subdomain-ingress.yaml)"

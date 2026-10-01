@@ -9,12 +9,11 @@
 # and autoscaling.
 #
 # !!! RELEASE-NAME CONTRACT !!!
-# The proxy's OIDC_DISCOVERY_INTERNAL_URL below is hard-pinned to the Service
-# DNS name `eoapi-mock-oidc-server.eoapi.svc.cluster.local`. That name is
-# derived from the Helm *release name* and *namespace*. You MUST install as:
-#     helm install eoapi ./charts/eoapi-workshop -n eoapi --create-namespace
-# Using any other release name or namespace breaks stac-auth-proxy's OIDC
-# discovery. See README.md.
+# Service names below (the proxy's OIDC_DISCOVERY_URL and UPSTREAM_URL, the
+# Labs' endpoints) are derived from the Helm *release name*. You MUST install
+# with release name `eoapi`; any namespace works:
+#     helm install eoapi ./charts/eoapi-workshop -n <namespace> --create-namespace
+# See README.md.
 #
 # !!! SUBDOMAIN-PER-SERVICE ROUTING !!!
 # Every service is exposed at <label>.<baseDomain> (see `routing` below), served
@@ -255,7 +254,7 @@ eoapi:
   stac-auth-proxy:
     enabled: true
     image:
-      tag: "v1.1.0"
+      tag: "v1.2.0"         # what docker-compose's :latest ran at the workshop
     env:
       # Served at the root of the stac subdomain (no path prefix).
       ROOT_PATH: ""
@@ -268,10 +267,37 @@ eoapi:
       # same origin, so it fetches JWKS from here too; an external LB URL would
       # hairpin from the pod and fail (PyJWKClientConnectionError → 401). The
       # proxy does NOT validate the token issuer, so the mock's external ISSUER
-      # doesn't need to match this URL. Pinned to release/namespace `eoapi`.
-      OIDC_DISCOVERY_URL: "http://eoapi-mock-oidc-server.eoapi.svc.cluster.local:8080/.well-known/openid-configuration"
+      # doesn't need to match this URL. Short Service name, so it resolves in
+      # whatever namespace the release is in (release name must stay `eoapi`).
+      OIDC_DISCOVERY_URL: "http://eoapi-mock-oidc-server:8080/.well-known/openid-configuration"
       # Used only for the startup readiness wait (same in-cluster URL).
-      OIDC_DISCOVERY_INTERNAL_URL: "http://eoapi-mock-oidc-server.eoapi.svc.cluster.local:8080/.well-known/openid-configuration"
+      OIDC_DISCOVERY_INTERNAL_URL: "http://eoapi-mock-oidc-server:8080/.well-known/openid-configuration"
+      # Writes require a token carrying the `stac:write` scope, not merely a valid
+      # token (mirrors docker-compose). Overrides the proxy's default
+      # PRIVATE_ENDPOINTS, which gate the same paths on authentication alone.
+      PRIVATE_ENDPOINTS: >-
+        {"^/collections$":[["POST","stac:write"]],
+        "^/collections/([^/]+)$":[["PUT","stac:write"],["PATCH","stac:write"],["DELETE","stac:write"]],
+        "^/collections/([^/]+)/items$":[["POST","stac:write"]],
+        "^/collections/([^/]+)/items/([^/]+)$":[["PUT","stac:write"],["PATCH","stac:write"],["DELETE","stac:write"]],
+        "^/collections/([^/]+)/bulk_items$":[["POST","stac:write"]]}
+      # Row-level authorization (chapter 7): hide `private-<owner>-*` records from
+      # everyone but the JWT whose `owner` claim matches. The module is mounted
+      # from the workshop-filters ConfigMap (templates/stac-auth-proxy-filters.yaml).
+      ITEMS_FILTER_CLS: "workshop_filters:TenantFilter"
+      ITEMS_FILTER_KWARGS: '{"field":"collection"}'
+      COLLECTIONS_FILTER_CLS: "workshop_filters:TenantFilter"
+      COLLECTIONS_FILTER_KWARGS: '{"field":"id"}'
+    # `PYTHONPATH=/app/src` in the proxy image, so this is importable as-is.
+    extraVolumes:
+      - name: workshop-filters
+        configMap:
+          name: workshop-filters
+    extraVolumeMounts:
+      - name: workshop-filters
+        mountPath: /app/src/workshop_filters.py
+        subPath: workshop_filters.py
+        readOnly: true
     # Served at root now → health checks at /healthz.
     startupProbe:
       httpGet:

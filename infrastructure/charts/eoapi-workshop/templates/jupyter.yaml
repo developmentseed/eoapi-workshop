@@ -102,7 +102,7 @@ spec:
             # DB creds from the PGO-generated secret, using the DIRECT primary keys
             # (host/port) — NOT pgbouncer-*, whose transaction pooling breaks the
             # DDL/COPY in 02-database.ipynb. Secret name is release-derived
-            # (release/namespace contract: both must be "eoapi").
+            # (release-name contract: must be "eoapi").
             - name: PGHOST
               valueFrom: { secretKeyRef: { name: {{ $root.Release.Name }}-pguser-eoapi, key: host } }
             - name: PGPORT
