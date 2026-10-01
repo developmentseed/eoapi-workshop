@@ -122,8 +122,8 @@ curl -s http://stac.eoapi-workshop.ds.io/collections    # sample items
 
 ## Participant JupyterLabs
 
-`jupyter.participants` (default `lab-01`…`lab-05`; edit for any N) → one Deployment
-+ Service + PVC each at `<name>.<baseDomain>`, running the GHCR image
+`jupyter.count` (default 5 → `lab-01`…`lab-05`) → one Deployment + Service +
+PVC each at `lab-NN.<baseDomain>`, running the GHCR image
 `ghcr.io/developmentseed/eoapi-workshop` (built by
 `.github/workflows/publish-workshop-image.yml`). Each Lab gets the eoAPI endpoints
 + DB creds injected (from the `eoapi-pguser-eoapi` PGO secret) and an access token

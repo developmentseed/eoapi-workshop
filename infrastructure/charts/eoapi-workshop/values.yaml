@@ -373,9 +373,10 @@ eoapi:
 # One isolated JupyterLab per participant at <name>.<baseDomain> (served at
 # root) and an access token. Notebooks come FRESH from the image on every start;
 # only /home/jovyan/work is a persistent PVC (edits to the provided notebooks
-# reset on restart — save work under work/). COUNT = length of `participants`
-# (default 5). Tokens are filled in by deploy.sh at deploy time and live only
-# in the gitignored .deploy/overrides.yaml — a direct
+# reset on restart — save work under work/). `count` Labs are named
+# lab-01..lab-NN. Tokens (`tokens`, a name → token map) are filled in by
+# deploy.sh at deploy time and live only in the gitignored
+# .deploy/overrides.yaml — a direct
 # `helm install` (without deploy.sh) leaves tokens empty, i.e. the Labs are
 # UNAUTHENTICATED. Use deploy.sh for any real deployment.
 jupyter:
@@ -389,12 +390,8 @@ jupyter:
   resources:
     requests: { cpu: "250m", memory: "1Gi" }
     limits: { cpu: "2", memory: "4Gi" }
-  participants:                 # COUNT = length of this list; tokens set by deploy.sh
-    - { name: lab-01 }
-    - { name: lab-02 }
-    - { name: lab-03 }
-    - { name: lab-04 }
-    - { name: lab-05 }
+  count: 5                      # Labs lab-01..lab-NN; each requests the resources above
+  tokens: {}                    # { lab-01: "<token>", ... } — set by deploy.sh
 
 ##################################################################
 # STAC-MANAGER  (subchart — STAC editing UI, EOEPCA-style)

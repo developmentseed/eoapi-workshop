@@ -10,9 +10,9 @@ notebooks run unchanged.
 {{- $root := . }}
 {{- $j := .Values.jupyter }}
 {{- $base := .Values.routing.baseDomain }}
-{{- range $j.participants }}
-{{- $name := .name }}
-{{- $token := .token | default "" }}
+{{- range $i := until (int $j.count) }}
+{{- $name := printf "lab-%02d" (add1 $i) }}
+{{- $token := index $j.tokens $name | default "" }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

@@ -123,7 +123,8 @@ participant_names() {
 # re-deploys); prints nothing and returns 1 if not present.
 existing_token() { # <name>
   [[ -f "$OVERRIDES" ]] || return 1
-  local t; t="$(grep -E "name: $1, token:" "$OVERRIDES" 2>/dev/null | sed -E 's/.*token: "([^"]+)".*/\1/' | head -1)"
+  # `    lab-01: "<tok>"` (tokens map), or the older `- { name: lab-01, token: "<tok>" }`.
+  local t; t="$(grep -E "^    $1: \"|name: $1, token:" "$OVERRIDES" 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/' | head -1)"
   [[ -n "$t" ]] && printf '%s' "$t"
 }
 
@@ -164,12 +165,12 @@ write_overrides() {
     echo "  oidc:"
     echo "    authority: \"${SCHEME}://mock-oidc.${BASE_DOMAIN}\""
     echo "jupyter:"
-    echo "  participants:"
+    echo "  tokens:"
     local name tok
     while read -r name; do
       [[ -n "$name" ]] || continue
       tok="$(existing_token "$name" || true)"; [[ -n "$tok" ]] || tok="$(openssl rand -hex 16)"
-      echo "    - { name: ${name}, token: \"${tok}\" }"
+      echo "    ${name}: \"${tok}\""
     done < <(participant_names)
   } > "$tmp"
   mv "$tmp" "$OVERRIDES"

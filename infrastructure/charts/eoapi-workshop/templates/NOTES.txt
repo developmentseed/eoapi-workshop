@@ -18,10 +18,12 @@ the ingress LoadBalancer):
 {{- if .Values.jupyter.enabled }}
 
 Participant JupyterLabs:
-{{- range .Values.jupyter.participants }}
-  {{ .name }}   {{ $scheme }}://{{ .name }}.{{ $.Values.routing.baseDomain }}/lab{{ if .token }}?token={{ .token }}{{ end }}
+{{- range $i := until (int .Values.jupyter.count) }}
+{{- $name := printf "lab-%02d" (add1 $i) }}
+{{- $token := index $.Values.jupyter.tokens $name | default "" }}
+  {{ $name }}   {{ $scheme }}://{{ $name }}.{{ $.Values.routing.baseDomain }}/lab{{ if $token }}?token={{ $token }}{{ end }}
 {{- end }}
-{{- if not (first .Values.jupyter.participants).token }}
+{{- if not .Values.jupyter.tokens }}
   (tokens are empty — deploy with ./deploy.sh so each Lab gets an access token)
 {{- end }}
 {{- end }}

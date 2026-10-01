@@ -30,8 +30,9 @@ disabled in values (eoapi.ingress.enabled=false).
   {{- $rules = append $rules (dict "sub" "manager" "service" "eoapi-stac-manager" "port" 80) -}}
 {{- end -}}
 {{- if and .Values.jupyter .Values.jupyter.enabled -}}
-  {{- range .Values.jupyter.participants -}}
-    {{- $rules = append $rules (dict "sub" .name "service" (printf "%s-%s" $.Release.Name .name) "port" 8888) -}}
+  {{- range $i := until (int .Values.jupyter.count) -}}
+    {{- $name := printf "lab-%02d" (add1 $i) -}}
+    {{- $rules = append $rules (dict "sub" $name "service" (printf "%s-%s" $.Release.Name $name) "port" 8888) -}}
   {{- end -}}
 {{- end -}}
 {{- if $rules }}

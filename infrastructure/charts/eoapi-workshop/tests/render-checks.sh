@@ -51,6 +51,12 @@ check_has   "$J" 'browser\.eoapi-workshop\.ds\.io' "browser endpoint → subdoma
 check_has   "$J" 'STAC_API_BROWSER_URL.*stac\.eoapi-workshop\.ds\.io'   "browser-facing STAC API URL injected"
 check_has   "$J" 'TITILER_BROWSER_URL.*raster\.eoapi-workshop\.ds\.io'  "browser-facing titiler URL injected"
 check_has   "$J" 'TIPG_BROWSER_URL.*vector\.eoapi-workshop\.ds\.io'     "browser-facing tipg URL injected"
+J12="$(show templates/jupyter.yaml --set jupyter.count=12 --set jupyter.tokens.lab-12=abc)"
+check_count "$J12" '^kind: Deployment' 12 "jupyter.count=12 renders 12 Labs"
+check_has   "$J12" 'name: eoapi-lab-12$' "Labs named lab-01..lab-NN"
+check_has   "$J12" 'ServerApp.token=abc$' "token taken from jupyter.tokens by name"
+I12="$(show templates/subdomain-ingress.yaml --set jupyter.count=12)"
+check_has   "$I12" 'host: lab-12\.eoapi-workshop\.ds\.io' "ingress follows jupyter.count"
 J_OFF="$(show templates/jupyter.yaml --set jupyter.enabled=false)"
 check_count "$J_OFF" '^kind: Deployment' 0 "jupyter.enabled=false renders nothing"
 
