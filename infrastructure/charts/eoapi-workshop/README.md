@@ -76,7 +76,7 @@ Kubernetes 1.23+ with an **NGINX ingress controller**, the **Crunchy Postgres
 Operator (PGO)** (hard requirement — `postgrescluster` only reconciles if PGO/CRDs
 are installed), Helm 3.8+, and the wildcard DNS above. `deploy.sh` installs
 what's missing (unless `SKIP_PREREQS=1`): it leaves an existing `nginx`
-ingressclass and cert-manager alone, and installs/upgrades PGO in
+ingressclass, cert-manager and PGO alone, and otherwise installs PGO in
 `postgres-operator` — a cluster-wide operator, so mind other tenants on a
 shared cluster.
 

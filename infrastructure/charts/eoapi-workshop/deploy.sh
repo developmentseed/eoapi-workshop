@@ -69,9 +69,15 @@ install_prereqs() {
       --repo https://kubernetes.github.io/ingress-nginx \
       --namespace ingress-nginx --create-namespace --wait --timeout 5m
   fi
-  log "Installing Crunchy Postgres Operator (PGO)"
-  helm upgrade --install pgo oci://registry.developers.crunchydata.com/crunchydata/pgo \
-    --namespace postgres-operator --create-namespace --wait --timeout 5m
+  # Look for the operator Deployment, not the CRDs: `helm uninstall pgo` (teardown
+  # --all) leaves the CRDs behind with no operator to reconcile them.
+  if kubectl get deploy -A -l postgres-operator.crunchydata.com/control-plane -o name 2>/dev/null | grep -q .; then
+    log "Crunchy Postgres Operator (PGO) already running — leaving it untouched"
+  else
+    log "Installing Crunchy Postgres Operator (PGO)"
+    helm upgrade --install pgo oci://registry.developers.crunchydata.com/crunchydata/pgo \
+      --namespace postgres-operator --create-namespace --wait --timeout 5m
+  fi
   if [[ "$TLS" == "1" ]]; then
     # cert-manager is normally installed by Terraform (cluster platform). Only
     # install it here if it's absent, so a standalone (non-Terraform) run still
