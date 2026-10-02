@@ -80,7 +80,7 @@ The earlier attempt (commits 1f1c4ba, b837872, a09d79b, reporting 45/0/0) ran be
 
 ## Lines we own for this variant
 
-`python3 spike/checks/frontdoor-own/loc.py` (non-blank, non-comment; Helm `{{/* */}}` blocks and Python docstrings count as comments):
+`python3 spike/checks/frontdoor-own/loc.py` (removed on 2026-10-02 once the front door was chosen; it is in commit e3c0479) (non-blank, non-comment; Helm `{{/* */}}` blocks and Python docstrings count as comments):
 
 | lines | file | group |
 |---:|---|---|

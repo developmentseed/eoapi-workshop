@@ -1,6 +1,6 @@
 # JupyterHub (z2jh) front door on local kind
 
-> **Dropped 2026-10-02.** The own chart (`frontdoor-own.md`) was chosen as the front door. The JupyterHub variant's files (`spike/hub/`, `spike/checks/frontdoor-hub/`) were removed; they are in commit 10aac1d. This page stays as the record of the comparison.
+> **Dropped 2026-10-02.** The own chart (`frontdoor-own.md`) was chosen as the front door. The JupyterHub variant's files (`spike/hub/`, `spike/checks/frontdoor-hub/`) were removed; they are in commit 10aac1d, and `loc.py` in commit e3c0479. This page stays as the record of the comparison.
 
 *2026-10-01 · zero-to-jupyterhub chart **4.4.2** (latest stable, JupyterHub 5.5.2, KubeSpawner 7.1.0; tgz sha256 `0ddfa517…3c3e`) · kind v0.32.0 (node v1.36.1, kindnet), helm v4.1.4, ingress-nginx as on "labs" · Docker Desktop, arm64 Mac · branch `spike/per-user-stacks` · reproducible with `spike/hub/deploy.sh` then `spike/checks/frontdoor-hub/run.sh`*
 
