@@ -18,6 +18,7 @@ dependencies:
   - shapely
   - sqlite>=3.32.3
   - pip:
+    - cql2
     - haikunator
     - pypgstac[psycopg]==0.9.11
     - stactools-sentinel2
