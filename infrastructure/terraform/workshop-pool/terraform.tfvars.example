@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is git-ignored.
+project_id = "" # OVH public cloud project (tenant) ID
+kube_id    = "" # existing cluster's ID
+
+# OVH API token from https://www.ovh.com/auth/api/createToken?GET=/*&POST=/*&PUT=/*&DELETE=/*
+ovh_application_key    = ""
+ovh_application_secret = ""
+ovh_consumer_key       = ""
+
+# node_flavor = "b3-16"
+# node_count  = 3

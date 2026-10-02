@@ -108,6 +108,13 @@ The local STAC API is available at `http://localhost:8084` through stac-auth-pro
 
 If you are interested deploying a production-ready version of the eoAPI stack, you can deploy the same stack that we used in the in-person workshop to AWS using eoapi-cdk constructs. See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
 
+## Deploying to Kubernetes
+
+To run the workshop on a Kubernetes cluster, with a full eoAPI stack and
+JupyterLab for each participant, see [`participant/README.md`](./participant/README.md).
+[`infrastructure/terraform`](./infrastructure/terraform/README.md) provisions an
+OVH cluster for it, or adds a workshop node pool to an existing one.
+
 ## Rendering the notebooks as a website
 
 [Jupyter Book 2](https://jupyterbook.org/) builds a site straight from the

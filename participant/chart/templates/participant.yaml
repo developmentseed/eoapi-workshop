@@ -1,0 +1,69 @@
+{{- /* Per participant: one pod running participant/compose.participant.yml (every
+container shares localhost), a Service for the Lab port only, and two volumes. */ -}}
+{{- range $u := .Values.participants }}
+{{- $sel := dict "app.kubernetes.io/instance" $.Release.Name "participant" $u }}
+{{- $origin := printf $.Values.origin $u }}
+{{- range $vol := list "db" "work" }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $.Release.Name }}-{{ $u }}-{{ $vol }}
+  labels: {{ toJson $sel }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with $.Values.storage.className }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources: {requests: {storage: {{ index $.Values.storage $vol }}}}
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-{{ $u }}
+spec:
+  selector: {{ toJson $sel }}
+  ports: [{name: lab, port: 18888}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-{{ $u }}
+spec:
+  strategy: {type: Recreate}  # never two copies of one stack (DB is per pod)
+  selector:
+    matchLabels: {{ toJson $sel }}
+  template:
+    metadata:
+      labels: {{ toJson $sel }}
+    spec:
+      automountServiceAccountToken: false
+      # jovyan's group, so the Lab can write to its work volume
+      securityContext: {fsGroup: 1000, fsGroupChangePolicy: OnRootMismatch}
+      {{- include "eoapi.pool" $ | nindent 6 }}
+      volumes:
+        - {name: pgdata, persistentVolumeClaim: {claimName: {{ $.Release.Name }}-{{ $u }}-db}}
+        - {name: work, persistentVolumeClaim: {claimName: {{ $.Release.Name }}-{{ $u }}-work}}
+        - {name: filters, configMap: {name: {{ $.Release.Name }}-filters}}
+      {{- range $kind := list "initContainers" "containers" }}
+      {{ $kind }}:
+        {{- range $c := $.Values.containers }}
+        {{- if eq (default false $c.sidecar) (eq $kind "initContainers") }}
+        - name: {{ $c.name }}
+          {{- if $c.sidecar }}
+          restartPolicy: Always  # native sidecar: up (startupProbe) before the rest
+          {{- end }}
+          {{- include "eoapi.images" (list $ (toYaml $c.spec)) | nindent 10 }}
+          env:
+            {{- range $k, $v := $c.env }}
+            - {name: {{ $k }}, value: {{ $v | replace "{origin}" $origin | replace "{user}" $u | quote }}}
+            {{- end }}
+            {{- range $k, $key := $c.secretEnv }}
+            - name: {{ $k }}
+              valueFrom: {secretKeyRef: {name: {{ $.Release.Name }}-credentials, key: {{ $u }}-{{ $key }}}}
+            {{- end }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,229 @@
+# ONE participant's full eoAPI stack, laid out like a Kubernetes pod: the Lab
+# owns the network namespace and every other service joins it
+# (network_mode: service:lab), so they all share `localhost`. Only the Lab port
+# is published; the browser reaches each service SAME-ORIGIN through
+# jupyter-server-proxy at http://localhost:18888/<prefix>/ (see
+# lab/jupyter_server_config.py), behind the Lab login.
+#
+#   docker build -f ../Dockerfile.local -t eoapi-participant-lab-base ..   # once
+#   ./gen-env.sh                      # once: random secrets into participant/.env
+#   docker compose -p eoapi-participant -f compose.participant.yml up -d --build --wait
+#
+# Every service but the Lab binds 127.0.0.1: another pod (or container) cannot
+# reach it around the Lab login. On k8s keep the NetworkPolicy too.
+#
+# Port plan inside the shared netns:
+#   lab 18888 · stac-fastapi 8081 · titiler 8082 · tipg 8083 · stac-auth-proxy 8084
+#   mock-oidc 8085 · stac-manager 8086 · stac-browser 8080 · postgres 5432
+#
+# Images/tags match ../docker-compose.yml.
+
+x-pg: &pg
+  PGHOST: localhost
+  PGPORT: "5432"
+  PGUSER: eoapi
+  PGPASSWORD: ${POSTGRES_PASSWORD:?run ./gen-env.sh}
+  PGDATABASE: postgis
+
+services:
+  lab:
+    build: lab
+    image: eoapi-participant-lab
+    ports:
+      - "127.0.0.1:18888:18888"
+    volumes:
+      - ../docs:/home/jovyan/docs
+    environment:
+      <<: *pg
+      LAB_PASSWORD: ${LAB_PASSWORD:?run ./gen-env.sh}
+      LAB_TOKEN: ${LAB_TOKEN:?run ./gen-env.sh}
+      WORKSHOP_USER: u01
+      # --- notebook URL contract (docs/workshop_setup.py) ---
+      # server-side: what the kernel calls, inside the netns
+      STAC_API_ENDPOINT: http://localhost:8084/stac
+      TITILER_PGSTAC_API_ENDPOINT: http://localhost:8082/raster
+      TIPG_API_ENDPOINT: http://localhost:8083/vector
+      MOCK_OIDC_ENDPOINT: http://localhost:8085/oidc
+      # browser-facing: absolute prefixes, same origin as the Lab
+      STAC_API_BROWSER_URL: http://localhost:18888/stac
+      TITILER_BROWSER_URL: http://localhost:18888/raster
+      TIPG_BROWSER_URL: http://localhost:18888/vector
+      STAC_BROWSER_URL: http://localhost:18888/browser
+      MOCK_OIDC_BROWSER_URL: http://localhost:18888/oidc
+      STAC_MANAGER_URL: http://localhost:18888/manager
+
+  database:
+    build: db
+    image: eoapi-participant-db
+    network_mode: service:lab
+    environment:
+      POSTGRES_USER: eoapi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./gen-env.sh}
+      POSTGRES_DB: postgis
+      # The image's 990_pgstac.sh runs bare `psql`. No PGHOST: the init-time
+      # server listens on the unix socket only.
+      PGUSER: eoapi
+      PGPASSWORD: ${POSTGRES_PASSWORD:?run ./gen-env.sh}
+      PGDATABASE: postgis
+      PGDATA: /var/lib/postgresql/data/pgdata  # as in the chart (its volume holds lost+found)
+    command: postgres -N 100 -c listen_addresses=127.0.0.1
+    healthcheck:
+      # TCP, not the socket: the init-time server listens on the socket only,
+      # so this passes only once the baked data is loaded and Postgres restarted.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "eoapi", "-d", "postgis"]
+      interval: 3s
+      timeout: 3s
+      retries: 60
+
+  stac-fastapi:
+    image: ghcr.io/stac-utils/stac-fastapi-pgstac:7.0.0
+    network_mode: service:lab
+    environment:
+      <<: *pg
+      DB_MIN_CONN_SIZE: "1"
+      DB_MAX_CONN_SIZE: "1"
+      ENABLE_TRANSACTIONS_EXTENSIONS: "1"
+      FORWARDED_ALLOW_IPS: "*"
+    # --root-path /stac: Starlette's trailing-slash redirect (stac-manager POSTs
+    # /collections/) and the queryables $id keep the /stac prefix.
+    # Requests without the prefix still route.
+    command: uvicorn stac_fastapi.pgstac.app:create_app --factory --host 127.0.0.1 --port 8081 --workers 1 --root-path /stac
+    depends_on:
+      database: { condition: service_healthy }
+
+  mock-oidc:
+    # No version tags published; same digest the eoapi chart pins.
+    image: ghcr.io/alukach/mock-oidc-server@sha256:5972adac0b6e3a094ea043be0f1851c65e3fd54e17a546f0b71dedd17c7a2d6a
+    network_mode: service:lab
+    environment:
+      # The ISSUER path becomes FastAPI's root_path (/oidc).
+      ISSUER: http://localhost:18888/oidc
+      PORT: "8085"
+      SCOPES: stac:read,stac:write
+      FORWARDED_ALLOW_IPS: "*"
+    # The image's `python -m app` runs uvicorn with reload=True: a file watcher
+    # that idles at 6-9% CPU per stack. Same app, no watcher.
+    command: ["/app/.venv/bin/uvicorn", "app:app", "--host", "127.0.0.1", "--port", "8085", "--workers", "1"]
+
+  stac-auth-proxy:
+    image: ghcr.io/developmentseed/stac-auth-proxy:v1.2.0
+    network_mode: service:lab
+    environment:
+      PORT: "8084"
+      ROOT_PATH: /stac
+      UPSTREAM_URL: http://localhost:8081
+      # Advertised to browsers (auth extension / OpenAPI): the same-origin URL.
+      OIDC_DISCOVERY_URL: http://localhost:18888/oidc/.well-known/openid-configuration
+      # Fetched by the proxy itself (JWKS + startup wait): direct, no Lab login.
+      OIDC_DISCOVERY_INTERNAL_URL: http://localhost:8085/oidc/.well-known/openid-configuration
+      DEFAULT_PUBLIC: "true"
+      WAIT_FOR_UPSTREAM: "true"
+      FORWARDED_ALLOW_IPS: "*"
+      # Writes need the `stac:write` scope, not merely a valid token.
+      PRIVATE_ENDPOINTS: >-
+        {"^/collections$":[["POST","stac:write"]],
+        "^/collections/([^/]+)$":[["PUT","stac:write"],["PATCH","stac:write"],["DELETE","stac:write"]],
+        "^/collections/([^/]+)/items$":[["POST","stac:write"]],
+        "^/collections/([^/]+)/items/([^/]+)$":[["PUT","stac:write"],["PATCH","stac:write"],["DELETE","stac:write"]],
+        "^/collections/([^/]+)/bulk_items$":[["POST","stac:write"]]}
+      # Row-level authorization (chapter 7).
+      ITEMS_FILTER_CLS: workshop_filters:TenantFilter
+      ITEMS_FILTER_KWARGS: '{"field":"collection"}'
+      COLLECTIONS_FILTER_CLS: workshop_filters:TenantFilter
+      COLLECTIONS_FILTER_KWARGS: '{"field":"id"}'
+    # The image's `python -m stac_auth_proxy` hard-codes 0.0.0.0.
+    command: uvicorn stac_auth_proxy.app:create_app --factory --host 127.0.0.1 --port 8084
+    volumes:
+      - ../docs/workshop_filters.py:/app/src/workshop_filters.py:ro
+    depends_on: [stac-fastapi, mock-oidc]
+
+  titiler-pgstac:
+    image: ghcr.io/stac-utils/titiler-pgstac:3.2.0
+    network_mode: service:lab
+    environment:
+      <<: *pg
+      DB_MIN_CONN_SIZE: "1"
+      DB_MAX_CONN_SIZE: "10"
+      TITILER_PGSTAC_API_ROOT_PATH: /raster
+      FORWARDED_ALLOW_IPS: "*"
+      # GDAL: server settings, not compose's laptop ones (GDAL_CACHEMAX=75%,
+      # 512 MB VSI cache).
+      CPL_TMPDIR: /tmp
+      GDAL_CACHEMAX: "200"
+      GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+      GDAL_INGESTED_BYTES_AT_OPEN: "32768"
+      GDAL_HTTP_MERGE_CONSECUTIVE_RANGES: "YES"
+      GDAL_HTTP_MULTIPLEX: "YES"
+      GDAL_HTTP_VERSION: "2"
+      PYTHONWARNINGS: ignore
+      VSI_CACHE: "TRUE"
+      VSI_CACHE_SIZE: "5000000"
+      MOSAIC_CONCURRENCY: "1"
+      # Notebook 04 §4.4. Safe here: only reachable behind the Lab login.
+      TITILER_PGSTAC_API_ENABLE_EXTERNAL_DATASET_ENDPOINTS: "True"
+      AWS_NO_SIGN_REQUEST: "YES"
+    command: uvicorn titiler.pgstac.main:app --host 127.0.0.1 --port 8082 --workers 1
+    depends_on:
+      database: { condition: service_healthy }
+
+  tipg:
+    image: ghcr.io/developmentseed/tipg:1.6.1
+    network_mode: service:lab
+    environment:
+      POSTGRES_USER: eoapi
+      POSTGRES_PASS: ${POSTGRES_PASSWORD:?run ./gen-env.sh}
+      POSTGRES_DBNAME: postgis
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      DB_MIN_CONN_SIZE: "1"
+      DB_MAX_CONN_SIZE: "10"
+      TIPG_DB_SCHEMAS: '["features"]'
+      TIPG_ROOT_PATH: /vector
+      FORWARDED_ALLOW_IPS: "*"
+    command: uvicorn tipg.main:app --host 127.0.0.1 --port 8083 --workers 1
+    depends_on:
+      database: { condition: service_healthy }
+
+  stac-browser:
+    # 5.1.0 publishes linux/amd64 only.
+    platform: linux/amd64
+    image: ghcr.io/radiantearth/stac-browser:5.1.0
+    network_mode: service:lab
+    environment:
+      SB_pathPrefix: /browser/
+      SB_catalogUrl: http://localhost:18888/stac/
+      # Chapter 8 login against this stack's mock-oidc. The redirect URI is
+      # <origin><pathPrefix>auth = http://localhost:18888/browser/auth.
+      SB_authConfig: >-
+        {"type":"openIdConnect",
+        "openIdConnectUrl":"http://localhost:18888/oidc/.well-known/openid-configuration",
+        "oidcConfig":{"client_id":"stac-browser","automaticSilentRenew":false}}
+    volumes:  # nginx `listen 127.0.0.1:8080`
+      - ./stac-browser/default.conf.template:/etc/nginx/conf.d/default.conf.template:ro
+    depends_on: [stac-auth-proxy]
+
+  stac-manager:
+    # no arm64 manifest published — run the amd64 image under emulation
+    platform: linux/amd64
+    image: ghcr.io/developmentseed/stac-manager:1.0.3
+    network_mode: service:lab
+    environment:
+      PUBLIC_URL: http://localhost:18888/manager
+      REACT_APP_STAC_API: http://localhost:18888/stac
+      REACT_APP_STAC_BROWSER: http://localhost:18888/browser
+      REACT_APP_OIDC_AUTHORITY: http://localhost:18888/oidc
+      REACT_APP_OIDC_CLIENT_ID: stac-manager
+      APP_TITLE: STAC Manager
+      APP_DESCRIPTION: Manage STAC collections and items in your eoAPI workshop stack
+    # The image's default port 8080 is stac-browser's in this shared netns.
+    # stac-manager 1.0.3 hard-codes its OIDC scope without stac:write, so every
+    # save got 403: add it to the built bundle.
+    # Runs after the image's entrypoint, which rewrites the bundle from env.
+    command:
+      - sh
+      - -c
+      - >-
+        sed -i 's/scope:"openid profile email offline_access"/scope:"openid profile email offline_access stac:write"/'
+        packages/client/dist/client.*.js
+        && exec http-server -a 127.0.0.1 -p 8086 packages/client/dist
+    depends_on: [stac-auth-proxy]

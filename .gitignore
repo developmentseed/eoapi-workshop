@@ -179,3 +179,7 @@ node_modules/
 
 config.yaml
 _build/
+
+# Local cluster credentials
+kubeconfig.yaml
+kubeconfig.yml

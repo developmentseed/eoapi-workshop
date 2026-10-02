@@ -1,0 +1,30 @@
+{{- /* One pod per node of the workshop pool that pulls every participant image
+(~3.4 GiB), so a stack scheduled or moved there starts without the pull. */ -}}
+{{- if .Values.prepull }}
+{{- $sel := dict "app.kubernetes.io/instance" (printf "%s-prepull" .Release.Name) }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}-prepull
+spec:
+  selector:
+    matchLabels: {{ toJson $sel }}
+  template:
+    metadata:
+      labels: {{ toJson $sel }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "eoapi.pool" . | nindent 6 }}
+      initContainers:
+        {{- range .Values.containers }}
+        - name: {{ .name }}
+          image: {{ include "eoapi.images" (list $ .spec.image) }}
+          imagePullPolicy: IfNotPresent
+          command: [sh, -c, "true"]
+          resources: {requests: {cpu: 1m, memory: 8Mi}, limits: {memory: 32Mi}}
+        {{- end }}
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.10
+          resources: {requests: {cpu: 1m, memory: 8Mi}, limits: {memory: 16Mi}}
+{{- end }}
