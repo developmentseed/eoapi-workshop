@@ -27,13 +27,11 @@ for s in stac-fastapi titiler-pgstac tipg mock-oidc; do
   [ "$n" = 1 ] && echo "PASS workers.$s — 1 uvicorn process" || echo "FAIL workers.$s — $n uvicorn processes"
 done
 
-for s in stac-browser stac-manager; do
+native=$(docker version -f '{{.Server.Arch}}')
+for s in lab database stac-fastapi titiler-pgstac tipg stac-auth-proxy mock-oidc stac-browser stac-manager; do
   a=$(docker image inspect "$(docker inspect -f '{{.Image}}' "eoapi-spike-$s-1")" -f '{{.Architecture}}')
-  echo "PASS arch.$s — $a (no arm64 image published; emulated)"
-done
-for s in lab database stac-fastapi titiler-pgstac tipg stac-auth-proxy mock-oidc; do
-  a=$(docker image inspect "$(docker inspect -f '{{.Image}}' "eoapi-spike-$s-1")" -f '{{.Architecture}}')
-  [ "$a" = arm64 ] && echo "PASS arch.$s — arm64 native" || echo "FAIL arch.$s — $a"
+  case $s in stac-browser|stac-manager) want=amd64 ;; *) want=$native ;; esac  # amd64 only, emulated elsewhere
+  [ "$a" = "$want" ] && echo "PASS arch.$s — $a" || echo "FAIL arch.$s — $a, want $want"
 done
 
 # ---- inside the pod netns: every service directly and through the Lab proxy ----
