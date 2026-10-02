@@ -1,5 +1,7 @@
 # Browser apps through the Lab front door (topic: browser-apps)
 
+> **Superseded.** This is the pre-fix run of 2026-10-01. The current stack is described by `fix.md` (the fixes and a re-run of every topic) and `verify.md` (the independent re-run). The method and the reproduce steps below still apply.
+
 *2026-10-01 · re-run after the usage-limit interruption. Supersedes the unverified WIP files of
 commit 95823c1: every check below was re-run and its claims re-checked against source or a probe.*
 

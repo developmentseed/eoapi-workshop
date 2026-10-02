@@ -1,5 +1,9 @@
 # Footprint: memory and CPU of one participant's stack
 
+> **Superseded.** This is the pre-fix run of 2026-10-01. The current stack is described by `fix.md` (the fixes and a re-run of every topic) and `verify.md` (the independent re-run). The method and the reproduce steps below still apply.
+>
+> Only each run's `results/<label>/analysis.txt` is kept in the tree. The raw samples this page cites (`run.out`, `samples.csv`, ...) are in commit e3c0479; `run.sh` regenerates them.
+
 *2026-10-01, verified rerun · Docker Desktop on an arm64 Mac (VM: 6 vCPU, 23.4 GiB, cgroup v2, kernel 6.12.54-linuxkit) · branch `spike/per-user-stacks` · reproducible with `spike/checks/footprint/run.sh <label>` · committed data: `results/cold/` (seed 1790874859, ~17:14Z), `results/warm/` (seed 1790875096, ~17:18Z) and `results/warm2/` (seed 1790880490, ~18:48Z), all on the stack restarted at 17:09Z.*
 
 This file replaces the WIP version from commit 95823c1, which a usage limit interrupted. Every number below comes from runs made in this session, except WIP figures quoted as such. Where the WIP differed, see [What changed from the WIP](#what-changed-from-the-wip-attempt).

@@ -1,5 +1,7 @@
 # APIs: STAC, raster and vector under their prefixes, through the Lab
 
+> **Superseded.** This is the pre-fix run of 2026-10-01. The current stack is described by `fix.md` (the fixes and a re-run of every topic) and `verify.md` (the independent re-run). The method and the reproduce steps below still apply.
+
 *2026-10-01 · Docker Desktop, arm64 Mac · branch `spike/per-user-stacks` · stack from `spike/compose.participant.yml` (left running by the build agent, not restarted) · reproducible via `spike/checks/apis/run.sh`*
 
 ## Result

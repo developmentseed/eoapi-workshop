@@ -1,5 +1,7 @@
 # Notebooks: docs/00–08 run headless in one participant's stack
 
+> **Superseded.** This is the pre-fix run of 2026-10-01. The current stack is described by `fix.md` (the fixes and a re-run of every topic) and `verify.md` (the independent re-run). The method and the reproduce steps below still apply.
+
 *2026-10-01 · local compose stack `eoapi-spike` (`spike/compose.participant.yml`), Lab image conda env `eoapi-workshop`, nbconvert 7.17.1 · reproducible via `spike/checks/notebooks/run.sh`*
 
 **Resumed run.** The first attempt was cut off by a usage limit; its files were committed unverified in `95823c1`. Everything below was re-executed from scratch: run 1 (`./run.sh`, all phases, 17:56–18:45Z), then two read-only re-reports (run 3 is the one quoted in full). It replaces the WIP version of this file. Where a number differs from the WIP, that is said.

@@ -1,5 +1,7 @@
 # Auth: the Lab login as the participant's only door (local compose)
 
+> **Superseded.** This is the pre-fix run of 2026-10-01. The current stack is described by `fix.md` (the fixes and a re-run of every topic) and `verify.md` (the independent re-run). The method and the reproduce steps below still apply.
+
 *2026-10-01 · Docker Desktop, arm64 Mac · branch `spike/per-user-stacks` · stack from `evidence/build.md`, left running · reproducible via `spike/checks/auth/run.sh`*
 
 ## Result

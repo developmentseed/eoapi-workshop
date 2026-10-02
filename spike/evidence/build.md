@@ -1,5 +1,7 @@
 # Build: one participant's stack in a "pod" (local compose)
 
+> **Superseded.** This is the pre-fix run of 2026-10-01. The current stack is described by `fix.md` (the fixes and a re-run of every topic) and `verify.md` (the independent re-run). The method and the reproduce steps below still apply.
+
 *2026-10-01 · Docker Desktop 28.5.2, arm64 Mac · branch `spike/per-user-stacks` · reproducible via `spike/checks/build/run.sh`*
 
 ## Result
