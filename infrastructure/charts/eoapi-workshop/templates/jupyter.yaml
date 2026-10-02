@@ -95,7 +95,7 @@ spec:
             - { name: TITILER_PGSTAC_API_ENDPOINT, value: "http://{{ $root.Release.Name }}-raster:8080" }
             - { name: TIPG_API_ENDPOINT,           value: "http://{{ $root.Release.Name }}-vector:8080" }
             - { name: MOCK_OIDC_ENDPOINT,          value: "http://{{ $root.Release.Name }}-mock-oidc-server:8080" }
-            - { name: STAC_BROWSER_ENDPOINT,       value: "http://browser.{{ $base }}" }
+            - { name: STAC_BROWSER_URL,            value: "http://browser.{{ $base }}" }
             # Browser-facing API URLs (external subdomains) — the notebooks' IFrame/
             # viewer cells hand these to the user's browser, which cannot reach the
             # in-cluster Service DNS above. Server-side httpx calls keep the *_ENDPOINT

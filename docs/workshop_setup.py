@@ -13,6 +13,68 @@ import random
 
 import httpx
 
+# --- URL contract -----------------------------------------------------------
+# Every environment (compose, per-participant pod, 2i2c) sets these explicitly.
+# Server-side: what the kernel calls. Browser-facing: absolute prefixes (scheme
+# included, may carry a path, e.g. https://lab-u01.<base>/raster); code only
+# appends to them. An unset browser URL falls back to the server URL.
+_SERVICES = {
+    # name: (server-side var, browser-facing var)
+    "stac": ("STAC_API_ENDPOINT", "STAC_API_BROWSER_URL"),
+    "raster": ("TITILER_PGSTAC_API_ENDPOINT", "TITILER_BROWSER_URL"),
+    "vector": ("TIPG_API_ENDPOINT", "TIPG_BROWSER_URL"),
+    "oidc": ("MOCK_OIDC_ENDPOINT", "MOCK_OIDC_BROWSER_URL"),  # unset: ch. 6-8 skip
+    "browser": (None, "STAC_BROWSER_URL"),
+    "manager": (None, "STAC_MANAGER_URL"),
+}
+
+
+def endpoints() -> dict[str, dict[str, str | None]]:
+    """{service: {"server": url | None, "browser": url | None}}, without trailing /."""
+    out = {}
+    for name, (server_var, browser_var) in _SERVICES.items():
+        server = (os.getenv(server_var, "") if server_var else "").rstrip("/") or None
+        browser = os.getenv(browser_var, "").rstrip("/") or server
+        out[name] = {"server": server, "browser": browser}
+    return out
+
+
+def to_browser(url: str) -> str:
+    """Swap a server-side prefix for its browser-facing one (e.g. tilejson tiles)."""
+    for e in endpoints().values():
+        server, browser = e["server"], e["browser"]
+        if server and browser and (url == server or url.startswith(server + "/")):
+            return browser + url[len(server) :]
+    return url
+
+
+def show_links() -> None:
+    """Render this participant's clickable service links in the notebook."""
+    from IPython.display import HTML, display
+
+    labels = {
+        "stac": "STAC API",
+        "raster": "Raster API (titiler-pgstac)",
+        "vector": "Vector API (tipg)",
+        "browser": "STAC Browser",
+        "manager": "STAC Manager",
+    }
+    items = [
+        f'<li><a href="{e["browser"]}/" target="_blank">{labels[name]}</a></li>'
+        for name, e in endpoints().items()
+        if name in labels and e["browser"]
+    ]
+    display(HTML(f"<ul>{''.join(items)}</ul>"))
+
+
+def workshop_user() -> str:
+    return os.getenv("WORKSHOP_USER") or os.getenv("JUPYTERHUB_USER") or "workshop"
+
+
+def collection_id(base: str = "sentinel-2-c1-l2a") -> str:
+    """This participant's collection id, e.g. u01-sentinel-2-c1-l2a."""
+    return f"{workshop_user()}-{base}"
+
 
 def setup(token: str | None = None):
     """
@@ -95,14 +157,14 @@ def setup(token: str | None = None):
         raise RuntimeError(f"Unexpected error during configuration: {str(e)}")
 
 
-# random set of 100 points from continental land masses
+# random set of points from continental land masses. Each one returns Sentinel-2
+# items for notebook 02's search; the 9 original points south of 85S returned none.
 random_land_points = [
     [51.85, 22.78],
     [42.34, 33.96],
     [112.52, 43.12],
     [-27.49, -77.08],
     [12.8, 22.03],
-    [25.5, -89.99],
     [-48.67, -80.69],
     [-112.84, 63.05],
     [-53.68, -9.73],
@@ -124,7 +186,6 @@ random_land_points = [
     [150.74, -27.96],
     [-120.51, 73.64],
     [143.15, 70.9],
-    [82.46, -86.63],
     [141.01, -23.53],
     [12.48, 29.88],
     [103.77, 69.62],
@@ -134,7 +195,6 @@ random_land_points = [
     [44.16, 37.43],
     [87.76, 39.51],
     [113.19, 64.65],
-    [-92.51, -86.57],
     [41.79, 66.13],
     [16.25, -82.69],
     [0.36, 33.02],
@@ -151,7 +211,6 @@ random_land_points = [
     [73.93, -72.64],
     [-137.13, -78.67],
     [38.78, 33.61],
-    [1.65, -89.03],
     [107.14, 38.67],
     [-98.47, 39.79],
     [-4.86, 16.17],
@@ -172,28 +231,23 @@ random_land_points = [
     [130.77, -83.12],
     [44.38, 7.34],
     [89.35, 38.01],
-    [-111.18, -85.34],
     [75.9, 21.85],
     [-30.85, 77.14],
     [136.97, -84.39],
     [-43.75, -20.63],
     [21.31, -80.99],
-    [-92.31, -88.19],
     [-79.02, -78.54],
     [8.1, 8.33],
     [29.55, -71.78],
     [87.92, 53.22],
     [-47.53, -16.27],
     [-41.31, -84.21],
-    [118.24, -88.41],
     [-104.27, 57.77],
     [-74.63, 20.26],
     [-140.12, 60.69],
     [-53.09, -1.05],
-    [-61.95, -88.61],
     [132.28, -17.58],
     [-127.24, 64.42],
-    [-116.36, -86.78],
     [25.21, -20.95],
     [97.07, 40.32],
     [9.05, 5.04],
