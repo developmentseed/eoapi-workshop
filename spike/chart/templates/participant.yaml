@@ -1,0 +1,51 @@
+{{- /* Per participant: one pod running spike/compose.participant.yml (every
+container shares localhost) and a Service for the Lab port only. */ -}}
+{{- range $u := .Values.participants }}
+{{- $sel := dict "app.kubernetes.io/instance" $.Release.Name "participant" $u }}
+{{- $origin := printf $.Values.origin $u }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-{{ $u }}
+spec:
+  selector: {{ toJson $sel }}
+  ports: [{name: lab, port: 18888}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-{{ $u }}
+spec:
+  strategy: {type: Recreate}  # never two copies of one stack (DB is per pod)
+  selector:
+    matchLabels: {{ toJson $sel }}
+  template:
+    metadata:
+      labels: {{ toJson $sel }}
+    spec:
+      automountServiceAccountToken: false
+      volumes:
+        - {name: pgdata, emptyDir: {}}
+        - {name: filters, configMap: {name: {{ $.Release.Name }}-filters}}
+      {{- range $kind := list "initContainers" "containers" }}
+      {{ $kind }}:
+        {{- range $c := $.Values.containers }}
+        {{- if eq (default false $c.sidecar) (eq $kind "initContainers") }}
+        - name: {{ $c.name }}
+          {{- if $c.sidecar }}
+          restartPolicy: Always  # native sidecar: up (startupProbe) before the rest
+          {{- end }}
+          {{- toYaml $c.spec | nindent 10 }}
+          env:
+            {{- range $k, $v := $c.env }}
+            - {name: {{ $k }}, value: {{ $v | replace "{origin}" $origin | replace "{user}" $u | quote }}}
+            {{- end }}
+            {{- range $k, $key := $c.secretEnv }}
+            - name: {{ $k }}
+              valueFrom: {secretKeyRef: {name: {{ $.Release.Name }}-credentials, key: {{ $u }}-{{ $key }}}}
+            {{- end }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
+{{- end }}

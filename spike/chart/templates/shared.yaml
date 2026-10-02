@@ -1,0 +1,60 @@
+{{- /* Release-wide: credentials, the chapter-7 filters + stac-browser nginx conf, one Ingress, one NetworkPolicy. */ -}}
+{{- $creds := printf "%s-credentials" .Release.Name }}
+{{- $old := (lookup "v1" "Secret" .Release.Namespace $creds).data | default dict }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $creds }}
+data:  # generated once, then kept across upgrades; delete a key + upgrade to rotate
+  {{- range $u := .Values.participants }}
+  {{- range $key, $len := dict "password" 12 "token" 48 "db" 32 }}
+  {{- $k := printf "%s-%s" $u $key }}
+  {{ $k }}: {{ index $old $k | default (randAlphaNum $len | b64enc) }}
+  {{- end }}
+  {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-filters
+data:
+  workshop_filters.py: {{ .Files.Get "files/workshop_filters.py" | quote }}
+  stac-browser.conf.template: {{ .Files.Get "files/stac-browser.conf.template" | quote }}
+---
+{{- $hosts := list }}
+{{- range .Values.participants }}{{ $hosts = append $hosts (printf $.Values.host .) }}{{ end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-labs
+  annotations: {{ toJson .Values.ingress.annotations }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- with .Values.ingress.tlsSecret }}
+  tls: [{secretName: {{ . }}, hosts: {{ toJson $hosts }}}]
+  {{- end }}
+  rules:
+    {{- range $u := .Values.participants }}
+    - host: {{ printf $.Values.host $u }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: {service: {name: {{ $.Release.Name }}-{{ $u }}, port: {name: lab}}}
+    {{- end }}
+---
+# Every port in every participant pod is closed except the Lab's, and that one
+# only to the ingress controller: no pod-to-pod traffic between stacks.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-lab-only
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/instance: {{ .Release.Name }}}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ .Values.ingress.controllerNamespace }}}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: ingress-nginx}}
+      ports: [{port: 18888}]

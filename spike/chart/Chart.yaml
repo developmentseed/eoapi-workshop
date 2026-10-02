@@ -1,0 +1,4 @@
+apiVersion: v2
+name: eoapi-participants
+description: One full eoAPI stack per participant, one pod each, the Lab as the only front door
+version: 0.0.1
