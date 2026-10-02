@@ -44,8 +44,14 @@ CONCURRENCY = 4
 
 # glad items cover 50-80N (100 tiles of 10x10 deg; 50-60N only west of 40W and
 # east of 50E); ecoregions are global.
-TITILER_CENTRES = {"a": [(-120, 55), (25, 63), (100, 60)], "b": [(-75, 52), (60, 62), (140, 62)]}
-TIPG_CENTRES = {"a": [(-100, 40), (20, 0), (100, 30), (-60, -10)], "b": [(10, 50), (-120, 60), (135, -25), (30, -20)]}
+TITILER_CENTRES = {
+    "a": [(-120, 55), (25, 63), (100, 60)],
+    "b": [(-75, 52), (60, 62), (140, 62)],
+}
+TIPG_CENTRES = {
+    "a": [(-100, 40), (20, 0), (100, 30), (-60, -10)],
+    "b": [(10, 50), (-120, 60), (135, -25), (30, -20)],
+}
 # Each run shifts every centre by the same longitude offset (from FOOTPRINT_SEED),
 # so a new run starts with cold titiler caches, as a fresh participant pod does.
 # Re-use a seed to replay the exact same requests.
@@ -126,7 +132,11 @@ def titiler(s):
     ts = tiles(TITILER_CENTRES[s], zooms, 200, seed=s)
     q = "assets=treecover2000&rescale=0,100&colormap_name=greens"
     reqs = [
-        ("GET", f"{LAB}/raster/collections/{GLAD}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?{q}", None)
+        (
+            "GET",
+            f"{LAB}/raster/collections/{GLAD}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?{q}",
+            None,
+        )
         for z, x, y in ts
     ]
     return run(f"titiler-{s}", reqs, H)
@@ -135,7 +145,11 @@ def titiler(s):
 def tipg(s):
     ts = tiles(TIPG_CENTRES[s], range(1, 8), 100, seed=s)
     reqs = [
-        ("GET", f"{LAB}/vector/collections/features.ecoregions/tiles/WebMercatorQuad/{z}/{x}/{y}", None)
+        (
+            "GET",
+            f"{LAB}/vector/collections/features.ecoregions/tiles/WebMercatorQuad/{z}/{x}/{y}",
+            None,
+        )
         for z, x, y in ts
     ]
     return run(f"tipg-{s}", reqs, H)
@@ -148,25 +162,40 @@ def stac(s):
     for i in range(50):
         lon, lat = rng.uniform(-180, 150), rng.uniform(50, 75)
         w = rng.choice([1, 5, 10, 30])
-        bbox = [round(lon, 3), round(lat, 3), round(min(lon + w, 180), 3), round(min(lat + w / 2, 85), 3)]
+        bbox = [
+            round(lon, 3),
+            round(lat, 3),
+            round(min(lon + w, 180), 3),
+            round(min(lat + w / 2, 85), 3),
+        ]
         kind = i % 3
         if kind == 0:
-            reqs.append(("POST", f"{base}/search", {"collections": [GLAD], "bbox": bbox, "limit": 100}))
+            reqs.append(
+                (
+                    "POST",
+                    f"{base}/search",
+                    {"collections": [GLAD], "bbox": bbox, "limit": 100},
+                )
+            )
         elif kind == 1:
             b = ",".join(map(str, bbox))
-            reqs.append(("GET", f"{base}/collections/{GLAD}/items?bbox={b}&limit=100", None))
+            reqs.append(
+                ("GET", f"{base}/collections/{GLAD}/items?bbox={b}&limit=100", None)
+            )
         else:
-            reqs.append((
-                "POST",
-                f"{base}/search",
-                {
-                    "collections": [GLAD],
-                    "bbox": bbox,
-                    "datetime": "2000-01-01T00:00:00Z/2024-01-01T00:00:00Z",
-                    "sortby": [{"field": "id", "direction": "desc"}],
-                    "limit": 50,
-                },
-            ))
+            reqs.append(
+                (
+                    "POST",
+                    f"{base}/search",
+                    {
+                        "collections": [GLAD],
+                        "bbox": bbox,
+                        "datetime": "2000-01-01T00:00:00Z/2024-01-01T00:00:00Z",
+                        "sortby": [{"field": "id", "direction": "desc"}],
+                        "limit": 50,
+                    },
+                )
+            )
     # Kernel-style: no Lab token (stac-auth-proxy 401s a non-Bearer header).
     return run(f"stac-{s}", reqs, {})
 
@@ -174,7 +203,7 @@ def stac(s):
 # Runs INSIDE the Lab kernel. ~478 MiB uint8 window of a glad COG (notebook 04's
 # cog_href), then one op that makes a same-size temporary, then hold it so the
 # 2 s sampler sees the steady state.
-KERNEL_CODE = r'''
+KERNEL_CODE = r"""
 import gc, json, os, sys, time
 def _mem():
     d = {}
@@ -206,7 +235,7 @@ _say("held")
 del da
 gc.collect()
 _say("freed")
-'''
+"""
 
 
 def kernel(_s):
@@ -222,13 +251,31 @@ def kernel(_s):
             timeout=900,
         )
         msg_id = uuid.uuid4().hex
-        ws.send(json.dumps({
-            "header": {"msg_id": msg_id, "username": "spike-footprint", "session": uuid.uuid4().hex,
-                       "msg_type": "execute_request", "version": "5.3"},
-            "parent_header": {}, "metadata": {}, "channel": "shell", "buffers": [],
-            "content": {"code": KERNEL_CODE, "silent": False, "store_history": False,
-                        "user_expressions": {}, "allow_stdin": False, "stop_on_error": True},
-        }))
+        ws.send(
+            json.dumps(
+                {
+                    "header": {
+                        "msg_id": msg_id,
+                        "username": "spike-footprint",
+                        "session": uuid.uuid4().hex,
+                        "msg_type": "execute_request",
+                        "version": "5.3",
+                    },
+                    "parent_header": {},
+                    "metadata": {},
+                    "channel": "shell",
+                    "buffers": [],
+                    "content": {
+                        "code": KERNEL_CODE,
+                        "silent": False,
+                        "store_history": False,
+                        "user_expressions": {},
+                        "allow_stdin": False,
+                        "stop_on_error": True,
+                    },
+                }
+            )
+        )
         while True:
             m = json.loads(ws.recv())
             if m.get("parent_header", {}).get("msg_id") != msg_id:

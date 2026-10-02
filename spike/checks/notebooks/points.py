@@ -31,16 +31,22 @@ for lon, lat in random_land_points:
             errors.pop((lon, lat), None)
             break
         except Exception as exc:  # noqa: BLE001 - report every failure mode
-            errors[(lon, lat)] = f"{type(exc).__name__}: {str(exc).splitlines()[0][:120]}"
+            errors[(lon, lat)] = (
+                f"{type(exc).__name__}: {str(exc).splitlines()[0][:120]}"
+            )
 
 zero = sorted(p for p, n in counts.items() if not n)
 vals = sorted(n for n in counts.values() if n is not None)
-print(f"{'PASS' if not zero and not errors else 'FAIL'} points.02-default — "
-      f"{len(random_land_points)} default points: {len(zero)} give 0 items {zero}, "
-      f"{len(errors)} error {list(errors.items())[:3]}")
+print(
+    f"{'PASS' if not zero and not errors else 'FAIL'} points.02-default — "
+    f"{len(random_land_points)} default points: {len(zero)} give 0 items {zero}, "
+    f"{len(errors)} error {list(errors.items())[:3]}"
+)
 if vals:
     q, med = statistics.quantiles(vals, n=10), statistics.median(vals)
     near = min(counts.items(), key=lambda kv: abs(kv[1] - med))
-    print(f"PASS points.02-volume — items loaded per participant: min {vals[0]}, "
-          f"p10 {q[0]:.0f}, median {med:.0f} (e.g. {near}), p90 {q[-1]:.0f}, "
-          f"max {vals[-1]} (top 3 {sorted(counts.items(), key=lambda kv: -(kv[1] or 0))[:3]})")
+    print(
+        f"PASS points.02-volume — items loaded per participant: min {vals[0]}, "
+        f"p10 {q[0]:.0f}, median {med:.0f} (e.g. {near}), p90 {q[-1]:.0f}, "
+        f"max {vals[-1]} (top 3 {sorted(counts.items(), key=lambda kv: -(kv[1] or 0))[:3]})"
+    )

@@ -19,7 +19,9 @@ def get(url):
 coll = get(f"{src}/collections/{collection}")
 # The source's own queryables and tilejson links would send STAC Browser to MAAP's
 # API and tiler; stac-fastapi regenerates self/root/parent/items itself.
-coll["links"] = [l for l in coll.get("links", []) if l.get("rel") in ("license", "cite-as")]
+coll["links"] = [
+    lk for lk in coll.get("links", []) if lk.get("rel") in ("license", "cite-as")
+]
 items = get(f"{src}/search?collections={collection}&limit={limit}")["features"]
 
 

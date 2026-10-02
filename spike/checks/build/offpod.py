@@ -57,6 +57,9 @@ wrong, right = try_login("wrong-password"), try_login(os.environ["PGPASSWORD"])
 unreachable = "postgres:5432" not in open_ports
 print(
     f"{'PASS' if wrong != 'ok' and (unreachable or right == 'ok') else 'FAIL'} db.off-pod — "
-    + ("not reachable from another netns (listen_addresses=127.0.0.1)" if unreachable
-       else f"reachable; wrong password: {wrong}; generated password: {right}")
+    + (
+        "not reachable from another netns (listen_addresses=127.0.0.1)"
+        if unreachable
+        else f"reachable; wrong password: {wrong}; generated password: {right}"
+    )
 )

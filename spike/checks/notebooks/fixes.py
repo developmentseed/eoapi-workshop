@@ -242,7 +242,7 @@ display(my_collection)""",
         },
         {  # (c)
             "cell": 17,
-            "expect": "params={\"filter\": f\"id LIKE '%{username_input.value}%'\"}",
+            "expect": 'params={"filter": f"id LIKE \'%{username_input.value}%\'"}',
             "source": """# using http client
 print(
     json.dumps(
@@ -586,41 +586,88 @@ MD_REPLACE = {
 }
 
 # Cells of 06/07/08 the `fixed` phase runs on their own (no STAC writes in them).
-LINKS = [("06-stac_transactions_auth", 2), ("07-row_level_auth", 7), ("08-stac_browser_auth", 10)]
-LINKS_PRELUDE = 'alice_id = "private-alice-notebook"  # set by cell 6 in the full notebook 08'
+LINKS = [
+    ("06-stac_transactions_auth", 2),
+    ("07-row_level_auth", 7),
+    ("08-stac_browser_auth", 10),
+]
+LINKS_PRELUDE = (
+    'alice_id = "private-alice-notebook"  # set by cell 6 in the full notebook 08'
+)
 
 _c = "username widget is empty when run headless; per-user stack: use collection_id()"
 CLASSES = {
     # as-is, nobody typed a username: 03 filters LIKE '%%' and picks whatever comes first
-    ("asis", "03-stac_fastapi_pgstac", 21): ("c", "LIKE '%%' picked the wrong collection (no items >= 2025-01-04); " + _c),
-    ("asis", "03-stac_fastapi_pgstac", 26): ("c", "same wrong collection, no items with eo:cloud_cover; " + _c),
-    ("asis", "04-titiler_pgstac", 7): ("c", "collection '-sentinel-2-c1-l2a' (empty username) not found; " + _c),
-    ("asis", "04-titiler_pgstac", 12): ("c", "cascade from [7]: the collection does not exist; " + _c),
+    ("asis", "03-stac_fastapi_pgstac", 21): (
+        "c",
+        "LIKE '%%' picked the wrong collection (no items >= 2025-01-04); " + _c,
+    ),
+    ("asis", "03-stac_fastapi_pgstac", 26): (
+        "c",
+        "same wrong collection, no items with eo:cloud_cover; " + _c,
+    ),
+    ("asis", "04-titiler_pgstac", 7): (
+        "c",
+        "collection '-sentinel-2-c1-l2a' (empty username) not found; " + _c,
+    ),
+    ("asis", "04-titiler_pgstac", 12): (
+        "c",
+        "cascade from [7]: the collection does not exist; " + _c,
+    ),
     ("asis", "04-titiler_pgstac", 14): ("c", "cascade from [12]"),
     ("asis", "04-titiler_pgstac", 17): ("c", "cascade from [12]"),
     # a default point with no Sentinel-2 items (9 of the 100 in workshop_setup; points.py)
     ("zeropoint", "02-database", 16): (
-        "e", "default point (25.5, -89.99) -> earth-search returns 0 items -> items[0]; 9/100 default "
-        "points do this, exactly the 9 south of 85S (points.py); drop them from random_land_points"),
-    ("zeropoint", "02-database", 24): ("e", "cascade from [16]: items[-1] of an empty list"),
-    ("zeropoint", "02-database", 26): ("e", "cascade from [16]: items[-1] of an empty list"),
+        "e",
+        "default point (25.5, -89.99) -> earth-search returns 0 items -> items[0]; 9/100 default "
+        "points do this, exactly the 9 south of 85S (points.py); drop them from random_land_points",
+    ),
+    ("zeropoint", "02-database", 24): (
+        "e",
+        "cascade from [16]: items[-1] of an empty list",
+    ),
+    ("zeropoint", "02-database", 26): (
+        "e",
+        "cascade from [16]: items[-1] of an empty list",
+    ),
     # any phase: stac-auth-proxy 1.2.0 + row-level filter re-sends the query string unencoded
     ("*", "03-stac_fastapi_pgstac", 23): (
-        "e", "stac-auth-proxy 1.2.0 filter injection (utils/filters.py dict_to_query_string) re-sends the query "
-        "unencoded: %2B -> '+' -> space -> 'Invalid RFC3339'; direct stac-fastapi returns 200; same config in compose"),
-    ("*", "03-stac_fastapi_pgstac", 28): ("e", "same proxy bug as [23]: the 400 body has no 'features'"),
+        "e",
+        "stac-auth-proxy 1.2.0 filter injection (utils/filters.py dict_to_query_string) re-sends the query "
+        "unencoded: %2B -> '+' -> space -> 'Invalid RFC3339'; direct stac-fastapi returns 200; same config in compose",
+    ),
+    ("*", "03-stac_fastapi_pgstac", 28): (
+        "e",
+        "same proxy bug as [23]: the 400 body has no 'features'",
+    ),
     ("*", "03-stac_fastapi_pgstac", 30): ("e", "cascade from [28]"),
     ("*", "03-stac_fastapi_pgstac", 32): ("e", "cascade from [28]"),
     # url.* / tile.* failures (same lookup)
-    ("asis", "04-titiler_pgstac", 9): ("c", "map of '-sentinel-2-c1-l2a' (empty username): 404"),
+    ("asis", "04-titiler_pgstac", 9): (
+        "c",
+        "map of '-sentinel-2-c1-l2a' (empty username): 404",
+    ),
     ("*", "04-titiler_pgstac", 17): (
-        "e", "titiler-pgstac 3.2.0 / rio-tiler 9.4.4 names bands b1..bN: '(nir - red)' -> 400 on every tile, "
-        "also direct on :8082, so the NDVI map is blank; '(b1 - b2) / (b1 + b2)' -> 200"),
+        "e",
+        "titiler-pgstac 3.2.0 / rio-tiler 9.4.4 names bands b1..bN: '(nir - red)' -> 400 on every tile, "
+        "also direct on :8082, so the NDVI map is blank; '(b1 - b2) / (b1 + b2)' -> 200",
+    ),
     ("*", "02-database", 22): (
-        "a", "reads STAC_BROWSER_ENDPOINT (renamed STAC_BROWSER_URL), so falls back to the public STAC Browser "
-        "pointed at the kernel-side http://localhost:8084/stac; use endpoints()"),
-    ("*", "03-stac_fastapi_pgstac", 2): ("a", "kernel-side URL printed; JupyterLab linkifies it, the click goes nowhere; print to_browser()"),
-    ("*", "06-stac_transactions_auth", 2): ("a", "kernel-side URLs printed; print to_browser()"),
+        "a",
+        "reads STAC_BROWSER_ENDPOINT (renamed STAC_BROWSER_URL), so falls back to the public STAC Browser "
+        "pointed at the kernel-side http://localhost:8084/stac; use endpoints()",
+    ),
+    ("*", "03-stac_fastapi_pgstac", 2): (
+        "a",
+        "kernel-side URL printed; JupyterLab linkifies it, the click goes nowhere; print to_browser()",
+    ),
+    ("*", "06-stac_transactions_auth", 2): (
+        "a",
+        "kernel-side URLs printed; print to_browser()",
+    ),
     ("*", "07-row_level_auth", 7): ("a", "kernel-side URL printed; print to_browser()"),
-    ("*", "08-stac_browser_auth", 10): ("a", "IFrame hard-codes compose's http://localhost:8080; use endpoints()['browser']['browser']"),
+    ("*", "08-stac_browser_auth", 10): (
+        "a",
+        "IFrame hard-codes compose's http://localhost:8080; use endpoints()['browser']['browser']",
+    ),
 }

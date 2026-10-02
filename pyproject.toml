@@ -20,3 +20,7 @@ dev = [
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# fragments: checks/auth/run.sh pipes `cat common.py <file>` into one python process
+"spike/checks/auth/{inpod,laptop,offpod}.py" = ["F821"]

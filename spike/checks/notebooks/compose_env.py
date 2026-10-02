@@ -18,7 +18,9 @@ import workshop_setup as ws  # noqa: E402
 env_list = yaml.safe_load(open(sys.argv[1]))["services"]["jupyterhub"]["environment"]
 env = dict(e.split("=", 1) for e in env_list)
 
-for k in [k for k in os.environ if k.endswith(("_ENDPOINT", "_BROWSER_URL", "_MANAGER_URL"))]:
+for k in [
+    k for k in os.environ if k.endswith(("_ENDPOINT", "_BROWSER_URL", "_MANAGER_URL"))
+]:
     del os.environ[k]
 os.environ.update(env)
 e = ws.endpoints()
@@ -26,12 +28,20 @@ b = e["browser"]["browser"]
 urls = {  # what the notebook cells build
     "03[11]": f"{e['stac']['browser']}/api.html",
     "04[3]": f"{e['raster']['browser']}/api.html",
-    "04[29]": ws.to_browser(f"{e['raster']['server']}/external/WebMercatorQuad/map.html"),
+    "04[29]": ws.to_browser(
+        f"{e['raster']['server']}/external/WebMercatorQuad/map.html"
+    ),
     "05[16]": ws.to_browser(f"{e['vector']['server']}/collections/x/items"),
-    "02[22]": f"{b}/collections/x" if b else f"https://radiantearth.github.io/stac-browser/#/external/{e['stac']['browser']}/collections/x",
+    "02[22]": f"{b}/collections/x"
+    if b
+    else f"https://radiantearth.github.io/stac-browser/#/external/{e['stac']['browser']}/collections/x",
     "06[2]": ws.to_browser(e["oidc"]["server"]),
     "08[10]": f"{b}/",
 }
-bad = {k: u for k, u in urls.items() if not u.startswith(("http://localhost:", "https://"))}
-print(f"{'PASS' if not bad else 'FAIL'} compose-env.committed — repo docker-compose.yml jupyterhub env: "
-      f"{len(urls) - len(bad)}/{len(urls)} notebook URLs open from a laptop; unreachable: {bad}")
+bad = {
+    k: u for k, u in urls.items() if not u.startswith(("http://localhost:", "https://"))
+}
+print(
+    f"{'PASS' if not bad else 'FAIL'} compose-env.committed — repo docker-compose.yml jupyterhub env: "
+    f"{len(urls) - len(bad)}/{len(urls)} notebook URLs open from a laptop; unreachable: {bad}"
+)

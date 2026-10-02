@@ -17,10 +17,28 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-SERVICES = ["lab", "database", "stac-fastapi", "titiler-pgstac", "tipg", "stac-auth-proxy",
-            "mock-oidc", "stac-browser", "stac-manager"]
+SERVICES = [
+    "lab",
+    "database",
+    "stac-fastapi",
+    "titiler-pgstac",
+    "tipg",
+    "stac-auth-proxy",
+    "mock-oidc",
+    "stac-browser",
+    "stac-manager",
+]
 NAMES = [f"eoapi-spike-{s}-1" for s in SERVICES]
-UNITS = {"B": 1, "KiB": 2**10, "MiB": 2**20, "GiB": 2**30, "kB": 1e3, "KB": 1e3, "MB": 1e6, "GB": 1e9}
+UNITS = {
+    "B": 1,
+    "KiB": 2**10,
+    "MiB": 2**20,
+    "GiB": 2**30,
+    "kB": 1e3,
+    "KB": 1e3,
+    "MB": 1e6,
+    "GB": 1e9,
+}
 
 
 def mib(text):
@@ -37,31 +55,47 @@ def sample(path, stop):
         nxt = time.time()
         while not os.path.exists(stop):
             t0 = time.time()
-            p = subprocess.run(["docker", "stats", "--no-stream", "--format", "json", *NAMES],
-                               capture_output=True, text=True)
+            p = subprocess.run(
+                ["docker", "stats", "--no-stream", "--format", "json", *NAMES],
+                capture_output=True,
+                text=True,
+            )
             for line in p.stdout.splitlines():
                 d = json.loads(line)
                 svc = d["Name"].removeprefix("eoapi-spike-").removesuffix("-1")
-                w.writerow([f"{t0:.3f}", svc, d["CPUPerc"].rstrip("%"),
-                            f"{mib(d['MemUsage'].split('/')[0]):.1f}", d["PIDs"]])
+                w.writerow(
+                    [
+                        f"{t0:.3f}",
+                        svc,
+                        d["CPUPerc"].rstrip("%"),
+                        f"{mib(d['MemUsage'].split('/')[0]):.1f}",
+                        d["PIDs"],
+                    ]
+                )
             f.flush()
             nxt += 2
             time.sleep(max(0.0, nxt - time.time()))
             nxt = max(nxt, time.time())
 
 
-CG = ("cat /sys/fs/cgroup/cpu.stat; echo peak $(cat /sys/fs/cgroup/memory.peak); "
-      "echo current $(cat /sys/fs/cgroup/memory.current); "
-      "grep -E '^(anon|file|inactive_file) ' /sys/fs/cgroup/memory.stat")
+CG = (
+    "cat /sys/fs/cgroup/cpu.stat; echo peak $(cat /sys/fs/cgroup/memory.peak); "
+    "echo current $(cat /sys/fs/cgroup/memory.current); "
+    "grep -E '^(anon|file|inactive_file) ' /sys/fs/cgroup/memory.stat"
+)
 
 # Lab processes: separates the Jupyter server from kernels (ours and other
 # testers'). Plain sh + /proc, so the probe itself costs ~no CPU in the Lab.
-PS = ("for p in /proc/[0-9]*; do c=$(tr '\\0' ' ' < $p/cmdline 2>/dev/null); case \"$c\" in "
-      "*ipykernel*|*jupyter*) echo \"$(awk '/^VmRSS/{print $2}' $p/status) $c\";; esac; done")
+PS = (
+    "for p in /proc/[0-9]*; do c=$(tr '\\0' ' ' < $p/cmdline 2>/dev/null); case \"$c\" in "
+    "*ipykernel*|*jupyter*) echo \"$(awk '/^VmRSS/{print $2}' $p/status) $c\";; esac; done"
+)
 
 
 def cgroup(name):
-    p = subprocess.run(["docker", "exec", name, "sh", "-c", CG], capture_output=True, text=True)
+    p = subprocess.run(
+        ["docker", "exec", name, "sh", "-c", CG], capture_output=True, text=True
+    )
     d = {}
     for line in p.stdout.splitlines():
         k, _, v = line.partition(" ")
@@ -74,7 +108,11 @@ def snap(label, path):
     t0 = time.time()
     with ThreadPoolExecutor(len(NAMES)) as ex:
         cg = dict(zip(SERVICES, ex.map(cgroup, NAMES)))
-    p = subprocess.run(["docker", "exec", "eoapi-spike-lab-1", "sh", "-c", PS], capture_output=True, text=True)
+    p = subprocess.run(
+        ["docker", "exec", "eoapi-spike-lab-1", "sh", "-c", PS],
+        capture_output=True,
+        text=True,
+    )
     procs = []
     for line in p.stdout.splitlines():
         rss, _, cmd = line.partition(" ")
@@ -82,17 +120,31 @@ def snap(label, path):
             continue
         kernel = "ipykernel" in cmd
         # Lab-started kernels carry kernel-<id>.json; anything else (nbclient, ...) is "external".
-        kid = cmd.split("kernel-")[-1].split(".json")[0][:8] if "kernel-" in cmd else "external"
-        procs.append({"kind": "kernel" if kernel else "server",
-                      "kernel": kid if kernel else "",
-                      "rss_mib": round(int(rss) / 1024, 1)})
+        kid = (
+            cmd.split("kernel-")[-1].split(".json")[0][:8]
+            if "kernel-" in cmd
+            else "external"
+        )
+        procs.append(
+            {
+                "kind": "kernel" if kernel else "server",
+                "kernel": kid if kernel else "",
+                "rss_mib": round(int(rss) / 1024, 1),
+            }
+        )
     with open(path, "a") as f:
-        f.write(json.dumps({"label": label, "t": t0, "cgroup": cg, "lab_procs": procs}) + "\n")
+        f.write(
+            json.dumps({"label": label, "t": t0, "cgroup": cg, "lab_procs": procs})
+            + "\n"
+        )
 
 
 def manifest(ref):
-    p = subprocess.run(["docker", "buildx", "imagetools", "inspect", "--raw", ref],
-                       capture_output=True, text=True)
+    p = subprocess.run(
+        ["docker", "buildx", "imagetools", "inspect", "--raw", ref],
+        capture_output=True,
+        text=True,
+    )
     return json.loads(p.stdout) if p.returncode == 0 else None
 
 
@@ -100,9 +152,15 @@ def amd64_layers(ref):
     """Compressed linux/amd64 layers [(digest, size)] from the registry, or None."""
     m = manifest(ref)
     if m and "manifests" in m:  # index: pick linux/amd64
-        d = next((x["digest"] for x in m["manifests"]
-                  if x.get("platform", {}).get("os") == "linux"
-                  and x.get("platform", {}).get("architecture") == "amd64"), None)
+        d = next(
+            (
+                x["digest"]
+                for x in m["manifests"]
+                if x.get("platform", {}).get("os") == "linux"
+                and x.get("platform", {}).get("architecture") == "amd64"
+            ),
+            None,
+        )
         if d is None:
             return None
         repo = ref.split("@")[0] if "@" in ref else ref.rsplit(":", 1)[0]
@@ -126,22 +184,34 @@ REFS = {
     "stac-manager": "ghcr.io/developmentseed/stac-manager:1.0.3",
 }
 # As the stack runs locally (mock-oidc is pinned by digest; locally it is tagged latest).
-LOCAL = {"eoapi-spike-lab:latest", "eoapi-spike-db:latest", "ghcr.io/stac-utils/stac-fastapi-pgstac:7.0.0",
-         "ghcr.io/stac-utils/titiler-pgstac:3.2.0", "ghcr.io/developmentseed/tipg:1.6.1",
-         "ghcr.io/developmentseed/stac-auth-proxy:v1.2.0", "ghcr.io/alukach/mock-oidc-server:latest",
-         "ghcr.io/radiantearth/stac-browser:5.1.0", "ghcr.io/developmentseed/stac-manager:1.0.3"}
+LOCAL = {
+    "eoapi-spike-lab:latest",
+    "eoapi-spike-db:latest",
+    "ghcr.io/stac-utils/stac-fastapi-pgstac:7.0.0",
+    "ghcr.io/stac-utils/titiler-pgstac:3.2.0",
+    "ghcr.io/developmentseed/tipg:1.6.1",
+    "ghcr.io/developmentseed/stac-auth-proxy:v1.2.0",
+    "ghcr.io/alukach/mock-oidc-server:latest",
+    "ghcr.io/radiantearth/stac-browser:5.1.0",
+    "ghcr.io/developmentseed/stac-manager:1.0.3",
+}
 
 
 def images(path):
-    p = subprocess.run(["docker", "image", "ls", "--format", "json"], capture_output=True, text=True)
+    p = subprocess.run(
+        ["docker", "image", "ls", "--format", "json"], capture_output=True, text=True
+    )
     local = {}
     for line in p.stdout.splitlines():
         d = json.loads(line)
         if f"{d['Repository']}:{d['Tag']}" in LOCAL:
             local[f"{d['Repository']}:{d['Tag']}"] = d["Size"]
     for name in ("eoapi-spike-lab", "eoapi-spike-db"):
-        arch = subprocess.run(["docker", "image", "inspect", name, "-f", "{{.Architecture}}"],
-                              capture_output=True, text=True).stdout.strip()
+        arch = subprocess.run(
+            ["docker", "image", "inspect", name, "-f", "{{.Architecture}}"],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
         local[f"{name}:latest (arch)"] = arch
     with ThreadPoolExecutor(len(REFS)) as ex:
         layers = dict(zip(REFS, ex.map(amd64_layers, REFS.values())))
@@ -153,7 +223,9 @@ def images(path):
                 unique += sz
     out = {
         "local_docker_image_ls": local,
-        "amd64_compressed_bytes": {k: (sum(s for _, s in v) if v else None) for k, v in layers.items()},
+        "amd64_compressed_bytes": {
+            k: (sum(s for _, s in v) if v else None) for k, v in layers.items()
+        },
         "amd64_unique_compressed_bytes_all": unique,
         "refs": REFS,
     }

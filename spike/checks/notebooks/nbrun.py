@@ -32,9 +32,20 @@ DOCS = "/home/jovyan/docs"
 USER = "spike-notebooks"
 
 PHASES = {
-    "docs": ["00-introduction", "01-stac_metadata", "02-database", "03-stac_fastapi_pgstac",
-             "04-titiler_pgstac", "05-tipg", "0608-links"],
-    "writes": ["06-stac_transactions_auth", "07-row_level_auth", "08-stac_browser_auth"],
+    "docs": [
+        "00-introduction",
+        "01-stac_metadata",
+        "02-database",
+        "03-stac_fastapi_pgstac",
+        "04-titiler_pgstac",
+        "05-tipg",
+        "0608-links",
+    ],
+    "writes": [
+        "06-stac_transactions_auth",
+        "07-row_level_auth",
+        "08-stac_browser_auth",
+    ],
 }
 
 # Harness substitutions: (notebook, cell index, old, new). They stand in for what a
@@ -43,19 +54,66 @@ PHASES = {
 # public-demo / private-*-notebook) are never touched. Each `old` must match exactly.
 HARNESS = [
     # participant types a location: pinned so every run loads the same items
-    ("docs", "02-database", 2, "default_lon, default_lat = get_random_point()",
-     "default_lon, default_lat = 148.09, -37.47  # harness: a default point, 1,136 items"),
+    (
+        "docs",
+        "02-database",
+        2,
+        "default_lon, default_lat = get_random_point()",
+        "default_lon, default_lat = 148.09, -37.47  # harness: a default point, 1,136 items",
+    ),
     # 06: run-scoped ids under our prefix
-    ("writes", "06-stac_transactions_auth", 4, 'f"tx-workshop-{run_id}"', f'f"{USER}-tx-{{run_id}}"'),
-    ("writes", "06-stac_transactions_auth", 4, 'f"tx-item-{run_id}"', f'f"{USER}-tx-item-{{run_id}}"'),
+    (
+        "writes",
+        "06-stac_transactions_auth",
+        4,
+        'f"tx-workshop-{run_id}"',
+        f'f"{USER}-tx-{{run_id}}"',
+    ),
+    (
+        "writes",
+        "06-stac_transactions_auth",
+        4,
+        'f"tx-item-{run_id}"',
+        f'f"{USER}-tx-item-{{run_id}}"',
+    ),
     # 07: private ids must keep the private-<owner>- prefix the TenantFilter keys on
-    ("writes", "07-row_level_auth", 9, 'f"public-demo-{run_id}"', f'f"{USER}-public-{{run_id}}"'),
-    ("writes", "07-row_level_auth", 9, 'f"private-alice-{run_id}"', f'f"private-alice-{USER}-{{run_id}}"'),
-    ("writes", "07-row_level_auth", 9, 'f"private-bob-{run_id}"', f'f"private-bob-{USER}-{{run_id}}"'),
+    (
+        "writes",
+        "07-row_level_auth",
+        9,
+        'f"public-demo-{run_id}"',
+        f'f"{USER}-public-{{run_id}}"',
+    ),
+    (
+        "writes",
+        "07-row_level_auth",
+        9,
+        'f"private-alice-{run_id}"',
+        f'f"private-alice-{USER}-{{run_id}}"',
+    ),
+    (
+        "writes",
+        "07-row_level_auth",
+        9,
+        'f"private-bob-{run_id}"',
+        f'f"private-bob-{USER}-{{run_id}}"',
+    ),
     # 08: never touch the fixed demo ids another tester may be logged in to
     ("writes", "08-stac_browser_auth", 6, '"public-demo"', f'"{USER}-public-demo"'),
-    ("writes", "08-stac_browser_auth", 6, '"private-alice-notebook"', f'"private-alice-{USER}"'),
-    ("writes", "08-stac_browser_auth", 6, '"private-bob-notebook"', f'"private-bob-{USER}"'),
+    (
+        "writes",
+        "08-stac_browser_auth",
+        6,
+        '"private-alice-notebook"',
+        f'"private-alice-{USER}"',
+    ),
+    (
+        "writes",
+        "08-stac_browser_auth",
+        6,
+        '"private-bob-notebook"',
+        f'"private-bob-{USER}"',
+    ),
 ]
 
 
@@ -66,7 +124,9 @@ def src(cell):
 def load(path):
     raw = open(path, encoding="utf-8").read()
     nb = json.loads(raw)
-    nb["_ascii"] = "\\u" in raw  # 06/07 are stored with escaped non-ASCII; keep diffs minimal
+    nb["_ascii"] = (
+        "\\u" in raw
+    )  # 06/07 are stored with escaped non-ASCII; keep diffs minimal
     return nb
 
 
@@ -90,7 +150,9 @@ def apply_harness(nbdir, phase):
         nb = load(path)
         s = src(nb["cells"][idx])
         if old not in s:
-            lines.append(f"FAIL harness.{phase}.{name}[{idx}] — expected text not found: {old}")
+            lines.append(
+                f"FAIL harness.{phase}.{name}[{idx}] — expected text not found: {old}"
+            )
             continue
         nb["cells"][idx]["source"] = s.replace(old, new)
         save(nb, path)
@@ -105,13 +167,21 @@ def check_fixes(nbdir):
     import fixes
 
     lines, nbs = [], {}
-    checks = [(name, e["cell"], e["expect"], e["source"], False) for name, es in fixes.FIXES.items() for e in es]
-    checks += [(name, i, old, new, True) for (name, i), (old, new) in fixes.MD_REPLACE.items()]
+    checks = [
+        (name, e["cell"], e["expect"], e["source"], False)
+        for name, es in fixes.FIXES.items()
+        for e in es
+    ]
+    checks += [
+        (name, i, old, new, True) for (name, i), (old, new) in fixes.MD_REPLACE.items()
+    ]
     for name, idx, old, new, passage in checks:
         s = src(nbs.setdefault(name, load(f"{nbdir}/{name}.ipynb"))["cells"][idx])
         ok = new in s if passage else (s == new if not old else old not in s)
-        lines.append(f"{'PASS' if ok else 'FAIL'} fixes.{name}[{idx}] — "
-                     f"{'edit in place' if ok else 'docs/ no longer holds the applied edit'}")
+        lines.append(
+            f"{'PASS' if ok else 'FAIL'} fixes.{name}[{idx}] — "
+            f"{'edit in place' if ok else 'docs/ no longer holds the applied edit'}"
+        )
     return lines
 
 
@@ -121,11 +191,20 @@ def links_notebook(nbdir):
     import fixes
 
     nbs = {name: load(f"{nbdir}/{name}.ipynb") for name, _ in fixes.LINKS}
-    prelude = {"cell_type": "code", "metadata": {}, "outputs": [], "execution_count": None,
-               "source": fixes.LINKS_PRELUDE}
-    save(dict(nbs["08-stac_browser_auth"],
-              cells=[prelude] + [nbs[name]["cells"][i] for name, i in fixes.LINKS]),
-         f"{nbdir}/0608-links.ipynb")
+    prelude = {
+        "cell_type": "code",
+        "metadata": {},
+        "outputs": [],
+        "execution_count": None,
+        "source": fixes.LINKS_PRELUDE,
+    }
+    save(
+        dict(
+            nbs["08-stac_browser_auth"],
+            cells=[prelude] + [nbs[name]["cells"][i] for name, i in fixes.LINKS],
+        ),
+        f"{nbdir}/0608-links.ipynb",
+    )
     return []
 
 
@@ -137,13 +216,21 @@ def drop_ours(phase, where=OURS):
     from pypgstac.db import PgstacDB
 
     with PgstacDB() as db:
-        ids = [r[0] for r in db.query(f"SELECT id FROM collections WHERE {where} ORDER BY id;")]
+        ids = [
+            r[0]
+            for r in db.query(f"SELECT id FROM collections WHERE {where} ORDER BY id;")
+        ]
         for cid in ids:
-            n = db.query_one("SELECT count(*) FROM items WHERE collection = %s;", (cid,))
+            n = db.query_one(
+                "SELECT count(*) FROM items WHERE collection = %s;", (cid,)
+            )
             list(db.query("SELECT delete_collection(%s);", (cid,)))
             print(f"PASS {phase}.drop — {cid} ({n} items)", flush=True)
         left = db.query_one(f"SELECT count(*) FROM collections WHERE {where};")
-    print(f"{'PASS' if not left else 'FAIL'} {phase}.clean — {len(ids)} dropped, {left} left", flush=True)
+    print(
+        f"{'PASS' if not left else 'FAIL'} {phase}.clean — {len(ids)} dropped, {left} left",
+        flush=True,
+    )
 
 
 def audit():
@@ -151,11 +238,19 @@ def audit():
     from pypgstac.db import PgstacDB
 
     with PgstacDB() as db:
-        ids = [r[0] for r in db.query(f"SELECT id FROM collections WHERE {OURS} ORDER BY id;")]
-        orphans = db.query_one("SELECT count(*) FROM items WHERE collection NOT IN (SELECT id FROM collections);")
+        ids = [
+            r[0]
+            for r in db.query(f"SELECT id FROM collections WHERE {OURS} ORDER BY id;")
+        ]
+        orphans = db.query_one(
+            "SELECT count(*) FROM items WHERE collection NOT IN (SELECT id FROM collections);"
+        )
     extra = [i for i in ids if i != f"{USER}-sentinel-2-c1-l2a"]
-    print(f"{'PASS' if not extra and not orphans else 'FAIL'} audit.clean — ours left: {ids}; "
-          f"unexpected: {extra}; items without a collection: {orphans}", flush=True)
+    print(
+        f"{'PASS' if not extra and not orphans else 'FAIL'} audit.clean — ours left: {ids}; "
+        f"unexpected: {extra}; items without a collection: {orphans}",
+        flush=True,
+    )
 
 
 def main(phases):
@@ -175,20 +270,37 @@ def main(phases):
             print(line, flush=True)
         env = dict(os.environ)
         if phase == "docs":
-            env["WORKSHOP_USER"] = USER  # collection_id() -> spike-notebooks-sentinel-2-c1-l2a
+            env["WORKSHOP_USER"] = (
+                USER  # collection_id() -> spike-notebooks-sentinel-2-c1-l2a
+            )
         for name in PHASES[phase]:
             t0 = time.monotonic()
             r = subprocess.run(
-                ["jupyter", "nbconvert", "--to", "notebook", "--execute", "--allow-errors",
-                 "--ExecutePreprocessor.timeout=600", "--ExecutePreprocessor.kernel_name=python3",
-                 "--output-dir", "out", f"{name}.ipynb"],
-                cwd=nbdir, env=env, capture_output=True, text=True,
+                [
+                    "jupyter",
+                    "nbconvert",
+                    "--to",
+                    "notebook",
+                    "--execute",
+                    "--allow-errors",
+                    "--ExecutePreprocessor.timeout=600",
+                    "--ExecutePreprocessor.kernel_name=python3",
+                    "--output-dir",
+                    "out",
+                    f"{name}.ipynb",
+                ],
+                cwd=nbdir,
+                env=env,
+                capture_output=True,
+                text=True,
             )
             dt = time.monotonic() - t0
             status = "PASS" if r.returncode == 0 else "FAIL"
             tail = r.stderr.strip().splitlines()[-1:] if r.returncode else []
-            print(f"{status} exec.{phase}.{name} — nbconvert rc={r.returncode} in {dt:.0f}s {tail}",
-                  flush=True)
+            print(
+                f"{status} exec.{phase}.{name} — nbconvert rc={r.returncode} in {dt:.0f}s {tail}",
+                flush=True,
+            )
 
 
 if __name__ == "__main__":
