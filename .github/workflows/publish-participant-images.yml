@@ -1,0 +1,53 @@
+name: Publish participant images
+
+# Builds the per-participant Lab and DB images (spike/lab, spike/db) for amd64
+# and pushes them to GHCR as eoapi-workshop-{lab,db}:sha-<commit>, the tag that
+# spike/chart pins (image.tag, spike/deploy.sh TAG). Pull requests only build.
+# A private package needs a pull secret on the namespace's default
+# ServiceAccount (infrastructure/charts/eoapi-workshop/deploy.sh does that).
+on:
+  push:
+    branches: [main, feat/k8s]
+    paths:
+      - Dockerfile.local
+      - environment.yml
+      - docs/**
+      - spike/lab/**
+      - spike/db/**
+      - .github/workflows/publish-participant-images.yml
+  pull_request:
+    paths:
+      - Dockerfile.local
+      - environment.yml
+      - docs/**
+      - spike/lab/**
+      - spike/db/**
+      - .github/workflows/publish-participant-images.yml
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    name: Build and push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REG: ghcr.io/${{ github.repository_owner }}
+      TAG: sha-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Build
+        run: |
+          docker build -f Dockerfile.local -t eoapi-spike-lab-base .
+          docker build -t "$REG/eoapi-workshop-lab:$TAG" spike/lab
+          docker build -t "$REG/eoapi-workshop-db:$TAG" spike/db
+      - name: Push
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "$REG/eoapi-workshop-lab:$TAG"
+          docker push "$REG/eoapi-workshop-db:$TAG"
+          echo "image.tag: \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"
