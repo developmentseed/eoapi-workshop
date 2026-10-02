@@ -11,8 +11,8 @@ Provisions the infrastructure the per-participant stacks
 - **ingress-nginx** (installed via Helm), whose OVH-provisioned load balancer is
   the cluster's public entry point.
 - **cert-manager** (installed via Helm; toggle with `enable_cert_manager`), for
-  Let's Encrypt TLS. Nothing here creates an issuer or certificate: `spike/chart`
-  takes a pre-issued secret (`ingress.tlsSecret`).
+  Let's Encrypt TLS. Terraform creates no issuer: `spike/chart` renders a namespaced
+  Issuer and Certificate when `tls.acmeServer` is set (`spike/chart/values-labs.yaml`).
 - A **wildcard `A` record** `*.eoapi-workshop.ds.io` in **AWS Route53** pointing
   at that load balancer's IP.
 
