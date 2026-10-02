@@ -1,8 +1,22 @@
 {{- /* Per participant: one pod running spike/compose.participant.yml (every
-container shares localhost) and a Service for the Lab port only. */ -}}
+container shares localhost), a Service for the Lab port only, and two volumes. */ -}}
 {{- range $u := .Values.participants }}
 {{- $sel := dict "app.kubernetes.io/instance" $.Release.Name "participant" $u }}
 {{- $origin := printf $.Values.origin $u }}
+{{- range $vol := list "db" "work" }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $.Release.Name }}-{{ $u }}-{{ $vol }}
+  labels: {{ toJson $sel }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with $.Values.storage.className }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources: {requests: {storage: {{ index $.Values.storage $vol }}}}
+{{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -25,8 +39,12 @@ spec:
       labels: {{ toJson $sel }}
     spec:
       automountServiceAccountToken: false
+      # jovyan's group, so the Lab can write to its work volume
+      securityContext: {fsGroup: 1000, fsGroupChangePolicy: OnRootMismatch}
+      {{- include "eoapi.pool" $ | nindent 6 }}
       volumes:
-        - {name: pgdata, emptyDir: {}}
+        - {name: pgdata, persistentVolumeClaim: {claimName: {{ $.Release.Name }}-{{ $u }}-db}}
+        - {name: work, persistentVolumeClaim: {claimName: {{ $.Release.Name }}-{{ $u }}-work}}
         - {name: filters, configMap: {name: {{ $.Release.Name }}-filters}}
       {{- range $kind := list "initContainers" "containers" }}
       {{ $kind }}:
@@ -36,7 +54,7 @@ spec:
           {{- if $c.sidecar }}
           restartPolicy: Always  # native sidecar: up (startupProbe) before the rest
           {{- end }}
-          {{- toYaml $c.spec | nindent 10 }}
+          {{- include "eoapi.images" (list $ (toYaml $c.spec)) | nindent 10 }}
           env:
             {{- range $k, $v := $c.env }}
             - {name: {{ $k }}, value: {{ $v | replace "{origin}" $origin | replace "{user}" $u | quote }}}

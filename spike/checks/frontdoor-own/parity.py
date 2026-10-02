@@ -19,6 +19,7 @@ CHART_ORIGIN, COMPOSE_ORIGIN = (
     "http://localhost:18888",
 )
 
+BUILT = {"eoapi-spike-lab": "eoapi-workshop-lab", "eoapi-spike-db": "eoapi-workshop-db"}
 compose = yaml.safe_load((SPIKE / "compose.participant.yml").read_text())["services"]
 pod = next(
     d
@@ -42,8 +43,12 @@ for name in sorted(set(compose) | set(chart)):
         print(f"FAIL parity.{name} — only in {'compose' if s else 'chart'}")
         continue
     diffs = []
-    img = s["image"] if "/" in s["image"] else f"{s['image']}:latest"
-    if img != c["image"]:
+    img = s["image"]
+    if img in BUILT:  # compose builds it locally; the chart pulls the same build
+        same = c["image"].rsplit(":", 1)[0].endswith("/" + BUILT[img])
+    else:
+        same = img == c["image"]
+    if not same:
         diffs.append(f"image {img} vs {c['image']}")
     ca = c.get("args") and [" ".join(a.split()) for a in c["args"]]
     if argv(s.get("command")) != ca:

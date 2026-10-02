@@ -6,6 +6,33 @@ participants: [u01, u02]
 host: lab-%s.spike.local
 origin: http://lab-%s.spike.local:18080
 
+# The Lab and DB images are built for amd64 and pushed by
+# .github/workflows/publish-participant-images.yml as
+# <registry>/eoapi-workshop-{lab,db}:sha-<commit>. Pin that tag, never :latest.
+# `local` = images tagged and `kind load`ed by hand (spike/README.md).
+image:
+  registry: ghcr.io/developmentseed
+  tag: local
+
+# Per participant, deleted with the participant or the release.
+# The DB rows (~200 MiB) and the Lab's /home/jovyan/work survive pod replacement.
+storage:
+  className: ""  # "" = the cluster's default StorageClass
+  db: 1Gi
+  work: 2Gi
+
+# The workshop node pool: participant pods and the pre-puller land only there.
+nodeSelector: {}
+tolerations: []
+
+# A DaemonSet that pulls every participant image onto each node in the pool.
+prepull: false
+
+# Pods may reach DNS and ports 80/443 on public addresses (S3, Earth Search,
+# pip), never private ranges (other pods, Services, nodes). Add here any
+# public address that must stay closed, e.g. the API server as a /32.
+egressExcept: []
+
 ingress:
   className: nginx
   controllerNamespace: ingress-nginx  # the only peer the NetworkPolicy admits
@@ -29,7 +56,7 @@ containers:
   - name: database
     sidecar: true
     spec:
-      image: eoapi-spike-db:latest
+      image: "{registry}/eoapi-workshop-db:{tag}"
       imagePullPolicy: IfNotPresent
       args: [postgres, -N, "100", -c, listen_addresses=127.0.0.1]
       volumeMounts: [{name: pgdata, mountPath: /var/lib/postgresql/data}]
@@ -38,14 +65,17 @@ containers:
         periodSeconds: 2
         failureThreshold: 150
       resources: {requests: {cpu: 60m, memory: 560Mi}, limits: {memory: 960Mi}}
-    env: {POSTGRES_USER: eoapi, POSTGRES_DB: postgis, PGUSER: eoapi, PGDATABASE: postgis}
+    # PGDATA one level down: a fresh block volume holds lost+found, and initdb
+    # refuses a non-empty directory.
+    env: {POSTGRES_USER: eoapi, POSTGRES_DB: postgis, PGUSER: eoapi, PGDATABASE: postgis, PGDATA: /var/lib/postgresql/data/pgdata}
     secretEnv: {POSTGRES_PASSWORD: db, PGPASSWORD: db}
 
   - name: lab
     spec:
-      image: eoapi-spike-lab:latest
+      image: "{registry}/eoapi-workshop-lab:{tag}"
       imagePullPolicy: IfNotPresent
       ports: [{name: lab, containerPort: 18888}]
+      volumeMounts: [{name: work, mountPath: /home/jovyan/work}]
       readinessProbe: {httpGet: {path: /login, port: lab}}
       resources: {requests: {cpu: 250m, memory: 1Gi}, limits: {memory: 3Gi}}
     env:

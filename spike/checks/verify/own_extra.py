@@ -101,7 +101,7 @@ elif phase == "write":
     )
     g = c.get(f"/stac/collections/{CID}")
     w = c.put(
-        "/api/contents/verify-work.txt",
+        "/api/contents/work/verify-work.txt",
         json={"type": "file", "format": "text", "content": "work"},
         headers={"X-XSRFToken": c.cookies.get("_xsrf")},
     )
@@ -110,7 +110,7 @@ elif phase == "write":
         and g.status_code == 200
         and w.status_code in (200, 201),
         "persist.setup",
-        f"u01 POST collection {CID} → {p.status_code}; GET → {g.status_code}; PUT ~/verify-work.txt → {w.status_code}",
+        f"u01 POST collection {CID} → {p.status_code}; GET → {g.status_code}; PUT ~/work/verify-work.txt → {w.status_code}",
     )
 elif phase == "read":
     import time
@@ -121,10 +121,10 @@ elif phase == "read":
         time.sleep(2)
     c = login("u01")
     g = c.get(f"/stac/collections/{CID}")
-    f = c.get("/api/contents/verify-work.txt")
+    f = c.get("/api/contents/work/verify-work.txt")
     say(
         g.status_code == 200 and f.status_code == 200,
         "persist.pod-replacement",
-        f"after the u01 pod was replaced: collection {CID} → {g.status_code}; ~/verify-work.txt → {f.status_code} "
+        f"after the u01 pod was replaced: collection {CID} → {g.status_code}; ~/work/verify-work.txt → {f.status_code} "
         "(404 = the participant's DB rows and Lab files are gone)",
     )

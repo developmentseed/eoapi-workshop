@@ -94,10 +94,31 @@ lab=$("${ING[@]}" curl -s -o /dev/null -m 5 -w '%{http_code}' "http://$IP1:18888
 sap=$("${ING[@]}" curl -s -o /dev/null -m 5 -w '%{http_code}' "http://$IP1:8084/stac/" 2>/dev/null)
 ok '[ "$lab" = 200 ] && [ "$sap" = 000 ]' netpol.ingress-to-lab-only "ingress-nginx pod → u01 :18888 HTTP $lab; → :8084 HTTP $sap (000 = no connection)"
 
+# Egress from u01's Lab terminal: cluster addresses closed, public 443 open.
+NODE=$(kubectl --kubeconfig "$KC" --context kind-eoapi-spike get node -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+egress() {
+  "${K[@]}" exec deploy/spike-u01 -c lab -- python -c "
+import socket, sys
+out = []
+for name, host, port in (a.split(':') for a in sys.argv[1:]):
+    s = socket.socket(); s.settimeout(3)
+    try: s.connect((host, int(port))); out.append(f'{name}=open')
+    except socket.timeout: out.append(f'{name}=timeout')
+    except socket.gaierror: out.append(f'{name}=nodns')
+    except OSError: out.append(f'{name}=closed')
+    finally: s.close()
+print(' '.join(out))" api:kubernetes.default.svc:443 other-ns:ingress-nginx-controller.ingress-nginx.svc:80 \
+    node:"$NODE":10250 earth-search:earth-search.aws.element84.com:443 s3:s3.us-west-2.amazonaws.com:443
+}
+out=$(egress)
+ok '[ "$out" = "api=timeout other-ns=timeout node=timeout earth-search=open s3=open" ]' netpol.egress "u01 Lab → $out"
+
 # A/B: without the policy the same probe must succeed, or the "blocked" above proves nothing.
 "${K[@]}" delete networkpolicy spike-lab-only >/dev/null
 for _ in 1 2 3 4 5 6 7 8 9 10; do open=$(probe u02 "$IP1"); grep -q "18888=open" <<<"$open" && break; sleep 1; done
 ok 'grep -q "18888=open" <<<"$open"' netpol.control.without-policy "policy deleted: u02 Lab → u01 pod: $open"
+out=$(egress)
+ok '[ "$out" = "api=open other-ns=open node=open earth-search=open s3=open" ]' netpol.control.egress-without-policy "policy deleted: u01 Lab → $out"
 # Second layer: the backends bind 127.0.0.1, so even without the policy only the Lab answers.
 ok '[ "$(grep -o "=open" <<<"$open" | wc -l | tr -d " ")" = 1 ]' loopback.without-policy "policy deleted: only :18888 open on u01's pod IP"
 
@@ -137,11 +158,11 @@ docker run --rm -i --network kind -e U01_PASSWORD -e U01_TOKEN -e U02_PASSWORD -
 # Last on purpose: it restarts u02's Lab, then a rollout gives u02 a clean pod again.
 labrc() { "${K[@]}" get pod -l participant=u02 -o jsonpath='{.items[0].status.containerStatuses[?(@.name=="lab")].restartCount}'; }
 rc0=$(labrc)
-"${K[@]}" exec deploy/spike-u02 -c lab -- sh -c 'echo work > /home/jovyan/docs/participant-work.txt && kill 1' >/dev/null 2>&1
+"${K[@]}" exec deploy/spike-u02 -c lab -- sh -c 'echo work > /home/jovyan/work/participant-work.txt && kill 1' >/dev/null 2>&1
 for _ in $(seq 60); do rc=$(labrc); [ "$rc" != "$rc0" ] && break; sleep 1; done
 "${K[@]}" wait pod -l participant=u02 --for=condition=Ready --timeout=120s >/dev/null 2>&1
-kept=$("${K[@]}" exec deploy/spike-u02 -c lab -- cat /home/jovyan/docs/participant-work.txt 2>/dev/null)
+kept=$("${K[@]}" exec deploy/spike-u02 -c lab -- cat /home/jovyan/work/participant-work.txt 2>/dev/null)
 ok '[ "$kept" = work ]' lab.files-survive-container-restart \
-  "wrote docs/participant-work.txt, killed the Lab (restartCount=$rc): file ${kept:+kept}${kept:-gone (the Lab's home is the container's writable layer; no volume)}"
+  "wrote work/participant-work.txt, killed the Lab (restartCount=$rc): file $([ "$kept" = work ] && echo kept || echo gone)"
 "${K[@]}" rollout restart deploy/spike-u02 >/dev/null && "${K[@]}" rollout status deploy/spike-u02 --timeout=5m >/dev/null
 exit 0

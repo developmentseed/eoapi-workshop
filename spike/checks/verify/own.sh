@@ -35,7 +35,7 @@ rm -f "${TMPDIR:-/tmp}/verify-values.yaml"
 changed=$(diff <(echo "$a") <(echo "$b") | grep -c '^>')
 total=$(echo "$a" | wc -l | tr -d ' ')
 ok '[ "$changed" = "$total" ]' upgrade.image-bump-replaces-every-pod \
-  "render with one shared image tag bumped: $changed of $total participant pod templates change (strategy Recreate → every stack restarts, emptyDir DB + Lab home lost)"
+  "render with one shared image tag bumped: $changed of $total participant pod templates change (strategy Recreate → every stack restarts; DB and work/ are on PVCs)"
 
 # 3. Pod replacement (eviction, node loss, template change): is participant data kept?
 py write

@@ -64,6 +64,7 @@ services:
       PGUSER: eoapi
       PGPASSWORD: ${POSTGRES_PASSWORD:?run ./gen-env.sh}
       PGDATABASE: postgis
+      PGDATA: /var/lib/postgresql/data/pgdata  # as in the chart (its volume holds lost+found)
     command: postgres -N 100 -c listen_addresses=127.0.0.1
     healthcheck:
       # TCP, not the socket: the init-time server listens on the socket only,
