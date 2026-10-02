@@ -1,9 +1,0 @@
-dependencies:
-- name: eoapi
-  repository: https://developmentseed.org/eoapi-k8s/
-  version: 0.16.3
-- name: stac-manager
-  repository: https://stac-manager.ds.io/
-  version: 1.0.3
-digest: sha256:086a17d66d1fc19f4ecb3b8a8a4f933c6d9705fbb5e9324b85d080e1c20f8ede
-generated: "2026-10-01T10:44:39.265109+01:00"

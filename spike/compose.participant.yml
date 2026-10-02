@@ -145,8 +145,8 @@ services:
       DB_MAX_CONN_SIZE: "10"
       TITILER_PGSTAC_API_ROOT_PATH: /raster
       FORWARDED_ALLOW_IPS: "*"
-      # GDAL: the chart's values (eoapi.raster.settings.envVars), not compose's
-      # laptop ones (GDAL_CACHEMAX=75%, 512 MB VSI cache).
+      # GDAL: server settings, not compose's laptop ones (GDAL_CACHEMAX=75%,
+      # 512 MB VSI cache).
       CPL_TMPDIR: /tmp
       GDAL_CACHEMAX: "200"
       GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR

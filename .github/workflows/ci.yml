@@ -33,13 +33,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
-      - name: Register dependency repos
-        run: |
-          helm repo add eoapi https://developmentseed.org/eoapi-k8s/
-          helm repo add stac-manager https://stac-manager.ds.io/
-      - name: Build chart dependencies
-        run: helm dependency build infrastructure/charts/eoapi-workshop
       - name: Lint
-        run: helm lint infrastructure/charts/eoapi-workshop
-      - name: Render checks
-        run: ./infrastructure/charts/eoapi-workshop/tests/render-checks.sh
+        run: helm lint spike/chart
+      - name: Render
+        # prepull=true renders the one template the defaults skip
+        run: helm template spike spike/chart --set prepull=true > /dev/null

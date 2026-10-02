@@ -1,7 +1,7 @@
 """Print SQL that upserts one STAC collection and its first N items into pgstac.
 
-Build-time only (db/Dockerfile). Mirrors the chart's features-loader-job
-stac-loader, which used pypgstac's Loader with Methods.upsert.
+Build-time only (db/Dockerfile). Same effect as pypgstac's Loader with
+Methods.upsert.
 """
 
 import json

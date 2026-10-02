@@ -1,9 +1,9 @@
-# ingress-nginx owns the cluster's public load balancer. Installing it here (as
-# opposed to via the chart's deploy.sh) lets Terraform read the IP OVH assigns
-# to the LB and drive the Route53 record from it — all in one `terraform apply`.
+# ingress-nginx owns the cluster's public load balancer. Installing it here
+# lets Terraform read the IP OVH assigns to the LB and drive the Route53 record
+# from it — all in one `terraform apply`.
 #
-# deploy.sh detects this install (the `nginx` ingressclass) and leaves it alone,
-# then installs the Postgres operator + the workshop release on top.
+# spike/chart's Ingress uses this `nginx` class, and its NetworkPolicy admits
+# only this `ingress-nginx` namespace.
 
 resource "helm_release" "ingress_nginx" {
   name             = "ingress-nginx"

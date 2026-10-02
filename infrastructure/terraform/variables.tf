@@ -59,7 +59,7 @@ variable "cluster_name" {
 }
 
 variable "kube_version" {
-  description = "Kubernetes minor version for the managed cluster (the eoapi chart needs >= 1.32)"
+  description = "Kubernetes minor version for the managed cluster"
   type        = string
   default     = "1.35"
 }
@@ -77,7 +77,7 @@ variable "node_count" {
 }
 
 variable "workshop_node_count" {
-  description = "Nodes in the extra `workshop` pool (0 = no pool). 3× b3-16 ≈ 20 participants."
+  description = "Nodes in the extra `workshop` pool (0 = no pool). 20 participants need 6× b3-16 or 3–4× b3-32, one spare included (spike/README.md \"Sizing\")."
   type        = number
   default     = 0
 }
@@ -95,7 +95,7 @@ variable "ingress_nginx_chart_version" {
 }
 
 variable "enable_cert_manager" {
-  description = "Install cert-manager (needed for TLS via the workshop chart's deploy.sh TLS=1). Harmless when idle."
+  description = "Install cert-manager (for Let's Encrypt TLS). Harmless when idle."
   type        = bool
   default     = true
 }

@@ -1,7 +1,7 @@
 # Wildcard A record: *.eoapi-workshop.ds.io -> ingress load balancer floating IP.
-# The chart serves every service at the root of its own subdomain under this
-# wildcard (stac., raster., vector., browser., manager., lab-01., ...), so a
-# single wildcard record covers all of them.
+# spike/chart serves each participant's stack at its own subdomain under this
+# wildcard (lab-u01., lab-u02., ...), so a single wildcard record covers all of
+# them.
 
 data "aws_route53_zone" "this" {
   name         = var.route53_zone_name

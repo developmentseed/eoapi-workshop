@@ -1,7 +1,7 @@
 # Terraform — OVH Managed Kubernetes + Route53 DNS
 
-Provisions the infrastructure the [`eoapi-workshop` Helm chart](../charts/eoapi-workshop)
-runs on:
+Provisions the infrastructure the per-participant stacks
+([`spike/`](../../spike/README.md)) run on:
 
 - A **3-node `b3-16` OVH Managed Kubernetes** cluster (fixed-size `workers`
   pool), plus an optional `workshop` pool for the event itself (see
@@ -10,19 +10,18 @@ runs on:
   router's external gateway).
 - **ingress-nginx** (installed via Helm), whose OVH-provisioned load balancer is
   the cluster's public entry point.
-- **cert-manager** (installed via Helm; toggle with `enable_cert_manager`), used
-  by the workshop chart for Let's Encrypt TLS.
+- **cert-manager** (installed via Helm; toggle with `enable_cert_manager`), for
+  Let's Encrypt TLS. Nothing here creates an issuer or certificate: `spike/chart`
+  takes a pre-issued secret (`ingress.tlsSecret`).
 - A **wildcard `A` record** `*.eoapi-workshop.ds.io` in **AWS Route53** pointing
   at that load balancer's IP.
 
-Terraform owns the cluster **platform** (ingress-nginx, cert-manager); the
-workshop chart's `deploy.sh` owns the **application** (PGO + the eoAPI release).
-So `deploy.sh teardown` never removes platform controllers — `terraform destroy`
-does. This avoids `deploy.sh` deleting resources out from under Terraform's state.
+Terraform owns the cluster **platform** (ingress-nginx, cert-manager);
+`spike/deploy.sh` owns the participant release and never touches the
+controllers. `terraform destroy` removes them.
 
-Every workshop service is served at the root of its own subdomain under the
-wildcard (`stac.`, `raster.`, `vector.`, `browser.`, `manager.`, `lab-01.`, …),
-so the one wildcard record covers all of them.
+Each participant's stack is served at its own subdomain under the wildcard
+(`lab-u01.`, `lab-u02.`, …), so the one wildcard record covers all of them.
 
 ## How the ingress IP + DNS are wired
 
@@ -44,8 +43,8 @@ period, the apply errors on the DNS record — just re-run `terraform apply` and
 the data source re-reads the now-assigned IP. The IP is chosen by OVH at
 LB-creation time and changes if ingress-nginx is destroyed and recreated.
 
-The chart's `deploy.sh` detects this ingress-nginx install (the `nginx`
-ingressclass) and leaves it untouched.
+`spike/chart` routes through this install: its Ingress uses the `nginx` class,
+and its NetworkPolicy admits only the `ingress-nginx` namespace.
 
 ## Prerequisites
 
@@ -69,12 +68,12 @@ terraform plan
 terraform apply
 ```
 
-Then grab the kubeconfig and deploy the workshop chart:
+Then grab the kubeconfig and deploy the participant stacks with
+`spike/deploy.sh` (see [`spike/README.md`](../../spike/README.md)):
 
 ```bash
 terraform output -raw kubeconfig > kubeconfig.yaml
 export KUBECONFIG=$PWD/kubeconfig.yaml
-../charts/eoapi-workshop/deploy.sh deploy
 ```
 
 ## State
@@ -101,12 +100,15 @@ S3-compatible), then run `terraform init -migrate-state`.
 
 ## Workshop node pool
 
-Extra nodes for the event itself (3× `b3-16` ≈ 20 participants), added before
-and removed after. Nodes are labelled `nodepool=workshop`; set
-`jupyter.nodeSelector: { nodepool: workshop }` in the chart's `values.yaml` to
-put the Labs on them.
+Extra nodes for the event itself, added before and removed after. Nodes are
+labelled `nodepool=workshop`; set `nodeSelector: { nodepool: workshop }` in
+`spike/chart`'s values to put the participant pods on them.
 
-- **Cluster created by this stack:** set `workshop_node_count = 3` in
+Each participant pod requests 2.75 GiB, so a `b3-16` holds 4 and a `b3-32` 8–10
+([`spike/README.md` "Sizing"](../../spike/README.md#sizing)). Keep one spare
+node: 20 participants need 6× `b3-16`, or 3–4× `b3-32`.
+
+- **Cluster created by this stack:** set `workshop_node_count = 6` in
   `terraform.tfvars` and `terraform apply`; set it back to `0` and apply to
   remove the pool.
 - **Any other existing OVH cluster:** use the standalone `workshop-pool/` root,
@@ -114,15 +116,14 @@ put the Labs on them.
 
   ```bash
   cd workshop-pool
-  cp terraform.tfvars.example terraform.tfvars   # project_id, kube_id, OVH API keys
+  cp terraform.tfvars.example terraform.tfvars   # project_id, kube_id, OVH API keys, node_count
   terraform init && terraform apply              # add the pool (~5–10 min)
   terraform destroy                              # remove it after the workshop
   ```
 
-3× `b3-16` costs the same as 6× `b3-8` (OVH prices per resource) but leaves
-more allocatable per node, lets a Lab burst to its 2 CPU limit, and pulls the
-1.8GiB Lab image three times instead of six. Add the pool the day before so the
-image is cached when participants arrive.
+Each node pulls about 3.4 GiB of images: add the pool the day before and deploy
+with `prepull: true` so they are cached when participants arrive.
 
-Tear the release down (`./deploy.sh teardown`) before removing the pool, or
-the Labs sit `Pending` with nowhere to run.
+Tear the release down (`CONFIRM=NAMESPACE spike/deploy.sh CONTEXT NAMESPACE down`)
+before removing the pool, or the participant pods sit `Pending` with nowhere to
+run.

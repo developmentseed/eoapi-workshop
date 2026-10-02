@@ -4,7 +4,7 @@ name: Publish participant images
 # and pushes them to GHCR as eoapi-workshop-{lab,db}:sha-<commit>, the tag that
 # spike/chart pins (image.tag, spike/deploy.sh TAG). Pull requests only build.
 # A private package needs a pull secret on the namespace's default
-# ServiceAccount (infrastructure/charts/eoapi-workshop/deploy.sh does that).
+# ServiceAccount, created by hand: spike/deploy.sh does not create one.
 on:
   push:
     branches: [main, feat/k8s]
