@@ -1,10 +1,10 @@
-"""Extra refutation probes for the own chart, through the kind ingress (verify stage).
+"""Cookie and persistence checks through the kind ingress, run by own.sh.
 
 Runs like frontdoor-own/ingress.py: a throwaway container on the `kind` docker
 network, credentials from the environment, never printed.
 Phase "cookie": u01's login cookie replayed on lab-u02.
-Phase "write" / "read": write a collection in u01's stack, then (after run.sh
-replaces the pod) check whether it is still there.
+Phase "write" / "read": write a collection and a work/ file in u01's stack, then
+(after own.sh replaces the pod) check they are still there."
 Prints: PASS|FAIL <name> — <detail>
 """
 

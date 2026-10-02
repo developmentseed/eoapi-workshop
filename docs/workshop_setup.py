@@ -1,11 +1,9 @@
 """
-Workshop database credentials helper for 2i2c JupyterHub environment.
+Workshop helpers: service URLs and database credentials.
 
 Usage in notebooks:
     from workshop_setup import setup
     config = setup()
-
-Note: API endpoints are already configured in the environment via the start script.
 """
 
 import os
@@ -14,7 +12,6 @@ import random
 import httpx
 
 # --- URL contract -----------------------------------------------------------
-# Every environment (compose, per-participant pod, 2i2c) sets these explicitly.
 # Server-side: what the kernel calls. Browser-facing: absolute prefixes (scheme
 # included, may carry a path, e.g. https://lab-u01.<base>/raster); code only
 # appends to them. An unset browser URL falls back to the server URL.
@@ -23,7 +20,7 @@ _SERVICES = {
     "stac": ("STAC_API_ENDPOINT", "STAC_API_BROWSER_URL"),
     "raster": ("TITILER_PGSTAC_API_ENDPOINT", "TITILER_BROWSER_URL"),
     "vector": ("TIPG_API_ENDPOINT", "TIPG_BROWSER_URL"),
-    "oidc": ("MOCK_OIDC_ENDPOINT", "MOCK_OIDC_BROWSER_URL"),  # unset: ch. 6-8 skip
+    "oidc": ("MOCK_OIDC_ENDPOINT", "MOCK_OIDC_BROWSER_URL"),  # unset: ch. 6-8 raise
     "browser": (None, "STAC_BROWSER_URL"),
     "manager": (None, "STAC_MANAGER_URL"),
 }
@@ -80,11 +77,8 @@ def setup(token: str | None = None):
     """
     Fetch database credentials from workshop config endpoint.
 
-    API endpoints (STAC, Raster, Vector) are already configured in the environment
-    via the start script. This function only fetches database credentials.
-
-    If running in docker-compose (detected by existing PG* env vars), skips fetching
-    and returns the existing configuration.
+    If the PG* variables are already set (compose, the participant pod), skips
+    fetching and returns them.
 
     Args:
         token: Workshop access token. If None, prompts user.
@@ -157,8 +151,8 @@ def setup(token: str | None = None):
         raise RuntimeError(f"Unexpected error during configuration: {str(e)}")
 
 
-# random set of points from continental land masses. Each one returns Sentinel-2
-# items for notebook 02's search; the 9 original points south of 85S returned none.
+# random land points, each with Sentinel-2 items for notebook 02's search
+# (none south of 85°S, where the search returns nothing).
 random_land_points = [
     [51.85, 22.78],
     [42.34, 33.96],

@@ -5,6 +5,7 @@
 # jupyter-server-proxy at http://localhost:18888/<prefix>/ (see
 # lab/jupyter_server_config.py), behind the Lab login.
 #
+#   docker build -f ../Dockerfile.local -t eoapi-participant-lab-base ..   # once
 #   ./gen-env.sh                      # once: random secrets into participant/.env
 #   docker compose -p eoapi-participant -f compose.participant.yml up -d --build --wait
 #
@@ -15,7 +16,7 @@
 #   lab 18888 · stac-fastapi 8081 · titiler 8082 · tipg 8083 · stac-auth-proxy 8084
 #   mock-oidc 8085 · stac-manager 8086 · stac-browser 8080 · postgres 5432
 #
-# Images/tags are PR #35's docker-compose.yml. One uvicorn worker per service.
+# Images/tags match ../docker-compose.yml.
 
 x-pg: &pg
   PGHOST: localhost

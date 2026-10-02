@@ -36,5 +36,5 @@ jobs:
       - name: Lint
         run: helm lint participant/chart
       - name: Render
-        # prepull=true renders the one template the defaults skip
-        run: helm template participants participant/chart --set prepull=true > /dev/null
+        # values-labs.yaml and prepull=true render the templates the defaults skip (tls, prepull)
+        run: helm template participants participant/chart -f participant/chart/values-labs.yaml --set prepull=true > /dev/null

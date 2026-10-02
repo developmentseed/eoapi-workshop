@@ -34,8 +34,6 @@ resource "openstack_networking_router_interface_v2" "router" {
   subnet_id = openstack_networking_subnet_v2.private.id
 }
 
-# NB: we do NOT pre-create the ingress load balancer. OVH Managed Kubernetes
-# does not honour the `loadbalancer.openstack.org/load-balancer-id` annotation
-# to adopt a pre-existing Octavia LB — it provisions its own. So ingress-nginx
-# owns the LB (see ingress.tf) and Terraform reads the public IP OVH assigns to
-# it for the Route53 record (see dns.tf).
+# No pre-created ingress LB: OVH Managed Kubernetes ignores the
+# `loadbalancer.openstack.org/load-balancer-id` annotation and provisions its
+# own, so ingress-nginx owns it (ingress.tf).

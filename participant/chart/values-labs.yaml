@@ -13,9 +13,9 @@ tls:
   acmeServer: https://acme-staging-v02.api.letsencrypt.org/directory
   names: [u01, u02, u03]
 
-# Once the workshop pool exists (its label and taint are chosen when it is created):
-# nodeSelector: {pool: workshop}
-# tolerations: [{key: workshop, operator: Exists, effect: NoSchedule}]
+# Once the workshop pool exists (OVH labels its nodes nodepool=<pool name>):
+# nodeSelector: {nodepool: workshop}
+# tolerations: [{key: workshop, operator: Exists, effect: NoSchedule}]  # only if the pool is tainted
 # prepull: true
 
 # If the rehearsal finds the API server's endpoint on a public address:

@@ -77,7 +77,7 @@ variable "node_count" {
 }
 
 variable "workshop_node_count" {
-  description = "Nodes in the extra `workshop` pool (0 = no pool). 20 participants need 6× b3-16 or 3–4× b3-32, one spare included (participant/README.md \"Sizing\")."
+  description = "Nodes in the extra `workshop` pool (0 = no pool); sizing in README.md \"Workshop node pool\""
   type        = number
   default     = 0
 }
@@ -95,7 +95,7 @@ variable "ingress_nginx_chart_version" {
 }
 
 variable "enable_cert_manager" {
-  description = "Install cert-manager (for Let's Encrypt TLS). Harmless when idle."
+  description = "Install cert-manager (participant/chart's `tls.acmeServer` needs it)"
   type        = bool
   default     = true
 }

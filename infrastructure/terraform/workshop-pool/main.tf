@@ -1,10 +1,6 @@
-# Workshop node pool on an EXISTING OVH managed cluster (one not created by
-# ../). `terraform apply` adds the pool, `terraform destroy` removes it — add it
-# before the workshop, destroy it after. For a cluster created by ../, set
-# `workshop_node_count` there instead.
-#
-# Nodes are labelled `nodepool=<pool_name>` by OVH; participant/chart pins the
-# participant pods to them with `nodeSelector: { nodepool: workshop }`.
+# The workshop node pool on an existing OVH cluster not created by ../ (for one
+# that is, set `workshop_node_count` there). OVH labels the nodes
+# nodepool=<pool_name>; select them with participant/chart's `nodeSelector`.
 
 terraform {
   required_version = ">= 1.9.0"
@@ -39,7 +35,7 @@ variable "node_flavor" {
 }
 
 variable "node_count" {
-  description = "Number of nodes in the pool. 20 participants need 6× b3-16 or 3–4× b3-32, one spare included (participant/README.md \"Sizing\")"
+  description = "Number of nodes in the pool; sizing in ../README.md \"Workshop node pool\""
   type        = number
   default     = 3
 }

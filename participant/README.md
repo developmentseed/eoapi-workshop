@@ -2,7 +2,7 @@
 
 One participant's full eoAPI stack, run locally with docker compose and laid out like a Kubernetes pod; `chart/` runs one such pod per participant.
 
-This started as a spike. Its investigation (every topic's checks, the write-ups and the screenshots) is on branch [`spike/per-user-stacks-evidence`](https://github.com/lhoupert/eoapi-workshop/tree/spike/per-user-stacks-evidence/spike), commit d50c0ce.
+The investigation behind this design (checks, write-ups, screenshots) is on branch [`spike/per-user-stacks-evidence`](https://github.com/lhoupert/eoapi-workshop/tree/spike/per-user-stacks-evidence/spike), commit d50c0ce.
 
 - The Lab container owns the network namespace, and every other service joins it (`network_mode: service:lab`), so they share `localhost`.
 - Only the Lab is published, on `127.0.0.1:18888`.
@@ -21,8 +21,6 @@ This started as a spike. Its investigation (every topic's checks, the write-ups 
 
 ## Design and trade-offs
 
-What this design chose, what each choice costs, and what to do about it on the day.
-
 - **One pod per participant, all services inside.**
   - Per participant this is 1 Deployment, 1 Service and 2 volumes, and it starts in about a minute.
   - The alternatives: the upstream eoapi-k8s chart once per participant means ~12 pods, a Postgres-operator cluster and hook Jobs, with a 6–12 min cold start. A single shared stack makes participants collide in one catalog.
@@ -35,9 +33,7 @@ What this design chose, what each choice costs, and what to do about it on the d
   - stac-fastapi has **one** connection (`DB_MAX_CONN_SIZE: "1"`); titiler-pgstac and tipg have 10 each.
   - *Effect, seen on the cluster:* one very large STAC request (`limit=5000` on a collection of about 1,100 items) held that connection. That participant's other STAC requests answered 500 for about a minute, until it finished.
   - Only their own stack is affected. Keep page sizes small in the notebooks; raising the pool costs memory in every pod.
-- **Sized by memory.**
-  - Each pod requests 2.75 GiB and 580m CPU; the Lab is capped at 3 GiB, which holds one big-raster kernel, not two.
-  - See "Sizing" for nodes per participant count, and keep one spare node: losing a node stops every stack on it.
+- **Sized by memory** (see "Sizing"). Keep one spare node: losing a node stops every stack on it.
 - **Participant data survives pod replacement; the provided notebooks do not.**
   - The database and `/home/jovyan/work` are on volumes.
   - The notebooks are baked into the Lab image, so a fix during the event means a new image tag and `deploy.sh up`. Every stack then restarts: data is kept, kernels and open sessions are lost.
@@ -54,7 +50,7 @@ What this design chose, what each choice costs, and what to do about it on the d
   - Issue it days ahead: Let's Encrypt's rate limits are shared across the whole domain. Use staging for rehearsals.
 - **The images are built for amd64 by CI and pinned by commit tag** (`sha-<commit>`, never `latest`). `prepull: true` pulls the ~3.4 GiB per node ahead of time.
 
-Verified on the OVH cluster "labs" (Calico) on 2026-10-02, with three participants:
+Verified on the OVH cluster "labs" (Calico) with three participants:
 - TLS and a `Secure` login cookie;
 - kernel websockets through ingress-nginx;
 - egress blocked as above, shown against a control pod outside the policy;
@@ -78,8 +74,6 @@ docker compose -p eoapi-participant -f compose.participant.yml up -d --build --w
 ```
 
 Open http://localhost:18888 and log in with the password, or with `?token=<LAB_TOKEN>` (see below).
-
-Every service but the Lab binds `127.0.0.1`: nothing else in the pod is reachable from another container or pod.
 
 ## From a laptop tool: token once, then the cookie
 
@@ -124,12 +118,7 @@ docker compose -p eoapi-participant -f compose.participant.yml up -d --wait --fo
 
 ## On Kubernetes (local kind)
 
-`chart/` runs the same stack as one pod per participant, behind one Ingress (`lab-uNN.<domain>`).
-
-- Each participant's DB and `/home/jovyan/work` are on PVCs: they survive pod replacement and are deleted with the participant or the release.
-- The NetworkPolicy closes every port but the Lab's to the ingress controller. Out of the pod, only DNS and 80/443 on public addresses are allowed (`egressExcept` closes more).
-- The Lab and DB images come from `<registry>/eoapi-workshop-{lab,db}:<image.tag>`. CI (`.github/workflows/publish-participant-images.yml`) pushes them for amd64 as `sha-<commit>`. On kind, tag the local builds `:local` and load them.
-- `nodeSelector`/`tolerations` pin the pods to the workshop node pool; `prepull: true` adds a DaemonSet that pulls every image onto each of its nodes.
+`chart/` runs the same stack as one pod per participant, behind one Ingress (`lab-uNN.<domain>`). CI (`.github/workflows/publish-participant-images.yml`) publishes the Lab and DB images as `sha-<commit>`; on kind, the compose builds are tagged `:local` and loaded instead.
 
 ```sh
 export KUBECONFIG=$PWD/.kind-kubeconfig
@@ -151,7 +140,7 @@ kubectl --context kind-eoapi-participant create namespace participants
 checks/frontdoor-own/run.sh && checks/verify/own.sh   # browser: http://lab-u01.participant.local:18080 (/etc/hosts)
 ```
 
-`deploy.sh` is the only way in for a real cluster: it takes the context, namespace, image tag and the whole participant list every time, refuses to drop participants without `REMOVE=1`, prints the credentials as CSV (`creds`), and `down` uninstalls the release and its volumes but never the namespace.
+On a real cluster, always go through `deploy.sh` (usage in its header): it takes the context, namespace, image tag and the whole participant list every time.
 
 ## On a real cluster
 
@@ -177,7 +166,7 @@ Rehearse before the event: 2–3 participants, staging certificates, and nothing
 
 ## Sizing
 
-Measured in the spike on one participant's pod (local Docker, adjusted for Kubernetes):
+Measured on one participant's pod (local Docker, adjusted for Kubernetes):
 
 | State | Memory per pod |
 |---|---|
@@ -187,13 +176,11 @@ Measured in the spike on one participant's pod (local Docker, adjusted for Kuber
 
 - The chart requests 580m CPU and 2.75 GiB per pod (limits: 6.1 GiB). Memory limits packing, not CPU: a pod averages 0.25–0.5 cores under load, and Postgres peaks around 1.2 cores during vector tiles.
 - A 3 GiB Lab holds one big-raster kernel, not two.
-- Pods per node: 1 on an 8 GB node, 4 on 16 GB, 8–10 on 32 GB (the last two extrapolated). Keep one spare node: losing a node stops every stack on it.
-- Each node pulls about 3.4 GiB of images; `prepull: true` does it ahead of time.
-- The world-view glad tile takes about 112 s cold and 0.4 s warm: warm each stack after deploying.
+- Pods per node: 1 on an 8 GB node, 4 on 16 GB, 8–10 on 32 GB (the last two extrapolated).
 
 ## Files
 
-- `compose.participant.yml`: the stack. Images and tags come from PR #35's `docker-compose.yml`.
+- `compose.participant.yml`: the stack, with the same images and tags as the root `docker-compose.yml`.
 - `lab/`: `FROM eoapi-participant-lab-base` plus jupyter-server-proxy 4.6.0 and `jupyter_server_config.py`, which sets the login, the proxy routes and kernel culling.
 - `db/`: pgstac v0.9.11 with the ecoregions table and the glad collection (100 items) baked in as init SQL. A container start needs no network.
 - `stac-browser/default.conf.template`: the image's nginx template, listening on `127.0.0.1` only.

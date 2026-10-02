@@ -54,10 +54,10 @@ ingress:
 # The containers of participant/compose.participant.yml. `spec` is passed through
 # verbatim; in `env`, {origin} and {user} are substituted per participant;
 # `secretEnv` maps a variable to a key of <release>-credentials (<user>-<key>).
-# Every container but the Lab binds 127.0.0.1 (participant/compose.participant.yml);
-# probes on them must be exec, not httpGet/tcpSocket (those dial the pod IP).
-# Resources: measured in the spike (participant/README.md "Sizing"). Keep the memory
-# values until a multi-hour soak; titiler was still growing between runs.
+# Every container but the Lab binds 127.0.0.1, so their probes must be exec, not
+# httpGet/tcpSocket (those dial the pod IP).
+# Resources: participant/README.md "Sizing". Do not lower the memory values before
+# a multi-hour soak: titiler's memory was still growing.
 x-pg: &pg {PGHOST: localhost, PGPORT: "5432", PGUSER: eoapi, PGDATABASE: postgis}
 x-pg-secret: &pgsecret {PGPASSWORD: db}
 

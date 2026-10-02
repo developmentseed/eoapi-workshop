@@ -1,6 +1,5 @@
-# ingress-nginx owns the cluster's public load balancer. Installing it here
-# lets Terraform read the IP OVH assigns to the LB and drive the Route53 record
-# from it — all in one `terraform apply`.
+# ingress-nginx owns the cluster's public load balancer; Terraform reads the IP
+# OVH assigns it and points the Route53 record at it (dns.tf).
 #
 # participant/chart's Ingress uses this `nginx` class, and its NetworkPolicy admits
 # only this `ingress-nginx` namespace.

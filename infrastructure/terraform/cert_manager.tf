@@ -1,6 +1,6 @@
-# cert-manager is cluster platform, so Terraform owns it (like ingress-nginx);
-# `terraform destroy` owns its removal. Nothing in this repo creates an issuer
-# or certificate: participant/chart takes a pre-issued secret (`ingress.tlsSecret`).
+# cert-manager is cluster platform, so Terraform owns it (like ingress-nginx).
+# Terraform creates no issuer: participant/chart renders a namespaced Issuer and
+# Certificate when `tls.acmeServer` is set.
 
 resource "helm_release" "cert_manager" {
   count = var.enable_cert_manager ? 1 : 0
@@ -12,7 +12,6 @@ resource "helm_release" "cert_manager" {
   namespace        = "cert-manager"
   create_namespace = true
 
-  # Install the CRDs (Certificate, ClusterIssuer, ...) with the controller.
   values = [yamlencode({
     crds = { enabled = true }
   })]

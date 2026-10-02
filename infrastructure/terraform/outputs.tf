@@ -13,8 +13,3 @@ output "ingress_public_ip" {
   description = "Public IP OVH assigned to the ingress-nginx load balancer (target of the wildcard DNS record)"
   value       = local.ingress_ip
 }
-
-output "wildcard_domain" {
-  description = "Wildcard hostname now resolving to the ingress load balancer"
-  value       = var.wildcard_domain
-}

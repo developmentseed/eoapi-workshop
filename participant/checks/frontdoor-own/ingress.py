@@ -76,6 +76,21 @@ def mint(c):
     return html.unescape(m.group(1)).strip()
 
 
+def collection(cid):
+    return {
+        "type": "Collection",
+        "stac_version": "1.0.0",
+        "id": cid,
+        "description": "kind check",
+        "license": "proprietary",
+        "links": [],
+        "extent": {
+            "spatial": {"bbox": [[-180, -90, 180, 90]]},
+            "temporal": {"interval": [[None, None]]},
+        },
+    }
+
+
 S = {u: client(u) for u in USERS}  # logged-in sessions, filled by login checks
 
 for u in USERS:
@@ -175,18 +190,7 @@ for u in USERS:
     @check(f"{u}.stac.bearer-write")
     def _():
         cid = f"kind-check-{u}"
-        col = {
-            "type": "Collection",
-            "stac_version": "1.0.0",
-            "id": cid,
-            "description": "frontdoor check",
-            "license": "proprietary",
-            "links": [],
-            "extent": {
-                "spatial": {"bbox": [[-180, -90, 180, 90]]},
-                "temporal": {"interval": [[None, None]]},
-            },
-        }
+        col = collection(cid)
         h = {"Authorization": f"Bearer {mint(S[u])}"}
         anon = S[u].post("/stac/collections", json=col)
         post = S[u].post("/stac/collections", json=col, headers=h)
@@ -240,21 +244,9 @@ def _():
 
 @check("cross.u01-jwt-on-u02-stac")
 def _():
-    col = {
-        "type": "Collection",
-        "stac_version": "1.0.0",
-        "id": "kind-check-cross",
-        "description": "must be refused",
-        "license": "proprietary",
-        "links": [],
-        "extent": {
-            "spatial": {"bbox": [[-180, -90, 180, 90]]},
-            "temporal": {"interval": [[None, None]]},
-        },
-    }
     r = S["u02"].post(
         "/stac/collections",
-        json=col,
+        json=collection("kind-check-cross"),
         headers={"Authorization": f"Bearer {mint(S['u01'])}"},
     )
     if r.status_code in (200, 201):

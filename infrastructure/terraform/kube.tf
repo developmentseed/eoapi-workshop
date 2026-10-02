@@ -23,18 +23,14 @@ resource "ovh_cloud_project_kube_nodepool" "workers" {
   name         = "workers" # NB: "_" is not allowed in node pool names
   flavor_name  = var.node_flavor
 
-  # Simple fixed-size pool (autoscaling off) — 3 nodes by default.
   autoscale     = false
   desired_nodes = var.node_count
   min_nodes     = var.node_count
   max_nodes     = var.node_count
 }
 
-# Extra capacity for the workshop itself, on top of `workers`. Off by default;
-# set workshop_node_count (e.g. 6 for 20 participants) before the workshop and
-# back to 0 after. Nodes are labelled nodepool=workshop, which participant/chart's
-# `nodeSelector` targets. (workshop-pool/ does the same for a cluster this stack
-# didn't create.)
+# The event's nodes, on top of `workers` (README "Workshop node pool"). OVH
+# labels them nodepool=workshop, for participant/chart's `nodeSelector`.
 resource "ovh_cloud_project_kube_nodepool" "workshop" {
   count         = var.workshop_node_count > 0 ? 1 : 0
   service_name  = var.project_id

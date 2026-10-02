@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Own-chart front door on the local kind cluster (participant/chart, release `participants`,
-# namespace participants). Prereq: participant/README.md "On Kubernetes (local kind)".
+# Tests participant/chart on the local kind cluster (release and namespace
+# `participants`). Prereq: participant/README.md "On Kubernetes (local kind)".
 # Prints one line per check: PASS|FAIL|BLOCKED <name> — <detail>. Always exits 0.
 # Never prints a password, token or JWT.
 #
-# Mutates the local kind cluster only: deletes the NetworkPolicy for an A/B
-# control, then `helm upgrade` (the upgrade check) puts it back.
+# Mutates the local kind cluster only: deletes the NetworkPolicy (restored by the
+# upgrade check), adds and removes u03, and restarts u02.
 set -uo pipefail
 cd "$(dirname "$0")"
 ROOT=$(cd ../.. && pwd)
@@ -68,7 +68,7 @@ for u in u01 u02; do
 done
 d1=$(sec u01-db); d2=$(sec u02-db)
 ok '[ ${#U01_PASSWORD} = 12 ] && [ "$U01_PASSWORD" != "$U02_PASSWORD" ] && [ "$d1" != "$d2" ] && [ "$U01_TOKEN" != "$U02_TOKEN" ]' \
-  secret.per-user "6 keys; Lab password 12 chars; password, token and DB password differ between u01 and u02"
+  secret.per-user "Lab password 12 chars; password, token and DB password differ between u01 and u02"
 
 # ---- NetworkPolicy: from u02's Lab terminal to u01's pod IP ----
 IP1=$("${K[@]}" get pod -l participant=u01 -o jsonpath='{.items[0].status.podIP}')
@@ -144,14 +144,14 @@ p1=$(sec u01-password)
 ok '[ "$n3" = true ] && [ "$uids" = "$uids3" ] && [ "$gone" = 1 ] && [ "$p1" = "$U01_PASSWORD" ]' upgrade.add-remove-participant \
   "u03 added (lab ready=$n3) and removed (deployment gone=$gone); u01/u02 pod UIDs unchanged; u01 password unchanged"
 
-# ---- the host's published port (what a browser on this Mac opens) ----
+# ---- the host's published port (what a browser on the host opens) ----
 host=$(docker run --rm --add-host lab-u01.participant.local:host-gateway eoapi-participant-lab python -c \
   "import urllib.request as u; print(u.urlopen('http://lab-u01.participant.local:18080/login', timeout=10).status)" 2>&1 | tail -1)
 ok '[ "$host" = 200 ]' host.port-18080 "http://lab-u01.participant.local:18080/login via the host's 127.0.0.1:18080 → HTTP $host"
 
 # ---- through the ingress, with the pre-upgrade passwords ----
 docker run --rm -i --network kind -e U01_PASSWORD -e U01_TOKEN -e U02_PASSWORD -e U02_TOKEN \
-  eoapi-participant-lab /entrypoint.sh python - < ingress.py 2>&1 \
+  eoapi-participant-lab python - < ingress.py 2>&1 \
   || say FAIL ingress.py "exited non-zero (see output above)"
 
 # ---- a Lab container restart (OOM at its limit, a crash) keeps the participant's files? ----

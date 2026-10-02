@@ -1,7 +1,7 @@
 # pgstac with the workshop data baked in. Every fetch happens at BUILD time;
-# a container (re)start loads the baked SQL from /docker-entrypoint-initdb.d
-# with no network access. Replaces compose's features-loader (apt-get + S3 on
-# every start) and adds the glad collection.
+# the first start (empty data directory) loads the baked SQL from
+# /docker-entrypoint-initdb.d with no network access. Replaces compose's
+# features-loader (apt-get + S3 at startup) and adds the glad collection.
 
 ARG PGSTAC_TAG=v0.9.11
 

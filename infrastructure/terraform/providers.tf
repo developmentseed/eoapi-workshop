@@ -16,17 +16,12 @@ provider "openstack" {
   password            = var.openstack_password
 }
 
-# AWS is only used for the Route53 wildcard record. Route53 is a global
-# service; the region here just satisfies the provider. Credentials are read
-# from the standard AWS chain (env vars, shared config, SSO) — nothing is
-# committed to this repo.
+# Route53 only. Credentials come from the standard AWS chain (env vars, shared
+# config, SSO).
 provider "aws" {
   region = var.aws_region
 }
 
-# helm + kubernetes talk to the cluster this stack creates, using the kubeconfig
-# OVH returns for it. Used to install ingress-nginx and read the public IP OVH
-# assigns to its load balancer (see ingress.tf).
 provider "helm" {
   kubernetes = {
     host                   = ovh_cloud_project_kube.primary.kubeconfig_attributes[0].host

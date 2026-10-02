@@ -28,13 +28,9 @@ terraform {
     }
   }
 
-  # State is stored on the local machine by default (see terraform.tfstate,
-  # which is git-ignored). This keeps the prerequisites for a deployment to a
-  # minimum — no state bucket required to get started.
-  #
-  # To migrate to remote state later, uncomment the block below, fill in a
-  # bucket, and run `terraform init -migrate-state`. OVH Object Storage is
-  # S3-compatible, so the standard S3 backend works against it:
+  # Local state by default (git-ignored). For remote state, fill in and
+  # uncomment the S3 backend below (OVH Object Storage is S3-compatible), then
+  # run `terraform init -migrate-state`:
   #
   # backend "s3" {
   #   endpoints                   = { s3 = "https://s3.<region>.io.cloud.ovh.net/" }
