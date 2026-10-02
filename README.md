@@ -98,6 +98,8 @@ This will start up 10 services:
 - stac-manager: web UI for editing STAC metadata via authenticated transactions on port 8086
 - Jupyter Hub: interactive compute environment where you can browse the tutorial materials interactively, available on port 8888
 
+Every port listens on `localhost` only, so the stack is not reachable from the rest of your network. On a remote machine, forward the ports you need over SSH (for example `ssh -L 8888:localhost:8888 <host>`).
+
 The local STAC API is available at `http://localhost:8084` through stac-auth-proxy. Read operations are public; transaction writes require a bearer token from the mock OIDC server (any username such as `test-user`). See [chapter 3](./docs/03-stac_fastapi_pgstac.ipynb) for read-only STAC API exploration and [chapter 6](./docs/06-stac_transactions_auth.ipynb) for authenticated transactions. [STAC Manager](http://localhost:8086) uses the same API.
 
 4. Open the Jupyter Hub in your web browser at `http://localhost:8888` and go through the tutorials in the `/docs` folder!
