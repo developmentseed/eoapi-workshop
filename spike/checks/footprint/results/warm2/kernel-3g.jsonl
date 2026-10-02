@@ -1,0 +1,6 @@
+{"step": "start", "t": 1790880682.4992757, "pid": 21, "VmHWM_MiB": 28, "VmRSS_MiB": 28}
+{"step": "imported", "t": 1790880682.70267, "pid": 21, "VmHWM_MiB": 134, "VmRSS_MiB": 134, "gdal_cachemax_MiB": 153, "rioxarray": "0.23.0"}
+{"step": "loaded", "t": 1790880687.182881, "pid": 21, "VmHWM_MiB": 809, "VmRSS_MiB": 799, "seconds": 4.5, "shape": [22400, 22400], "dtype": "uint8", "nbytes_MiB": 478}
+{"step": "computed", "t": 1790880687.540379, "pid": 21, "VmHWM_MiB": 1277, "VmRSS_MiB": 799, "loss_pixels": 51916863}
+{"step": "held", "t": 1790880699.5472257, "pid": 21, "VmHWM_MiB": 1277, "VmRSS_MiB": 799}
+{"step": "freed", "t": 1790880699.6462002, "pid": 21, "VmHWM_MiB": 1277, "VmRSS_MiB": 321}

@@ -1,0 +1,151 @@
+
+## Memory per container (MiB, docker stats working set, 2 s samples; Lab peak adds back the kernel's VmHWM spike)
+
+| container | idle (mean) | under load (median) | peak | after load (mean) | cgroup memory.peak* |
+|---|---|---|---|---|---|
+| lab | 189 | 259 | 1950 | 231 | 2150 |
+| database | 176 | 298 | 302 | 302 | 434 |
+| stac-fastapi | 88 | 95 | 95 | 95 | 128 |
+| titiler-pgstac | 360 | 370 | 372 | 370 | 411 |
+| tipg | 130 | 131 | 132 | 132 | 149 |
+| stac-auth-proxy | 170 | 170 | 170 | 169 | 218 |
+| mock-oidc | 44 | 44 | 44 | 44 | 58 |
+| stac-browser | 19 | 21 | 27 | 21 | 29 |
+| stac-manager | 60 | 44 | 79 | 44 | 112 |
+| **pod total** | 1235 | 1432 | 3170 (sum of peaks) | 1408 |  |
+
+*cgroup `memory.peak` is since container start and includes page cache; an upper bound, not a working set.
+
+Pod total at its busiest moment: 3123 MiB as measured (kernel GDAL cache uncapped), 2781 MiB with the kernel peak from the 3 GiB-limited run.
+
+## CPU per container (millicores; average over each phase from cgroup cpu.stat, peak = highest ~1 s docker-stats sample)
+
+| container | idle | titiler | tipg | stac | kernel | all | avg whole load window | peak 1-s |
+|---|---|---|---|---|---|---|---|---|
+| lab | 52 | 35 | 100 | 16 | 204 | 63 | 73 | 897 |
+| database | 16 | 76 | 1092 | 142 | 11 | 44 | 56 | 1245 |
+| stac-fastapi | 6 | 3 | 5 | 54 | 3 | 4 | 4 | 42 |
+| titiler-pgstac | 2 | 189 | 43 | 18 | 49 | 173 | 138 | 325 |
+| tipg | 4 | 6 | 208 | 6 | 2 | 9 | 9 | 147 |
+| stac-auth-proxy | 45 | 14 | 5 | 436 | 6 | 17 | 16 | 333 |
+| mock-oidc | 15 | 5 | 5 | 5 | 2 | 2 | 3 | 55 |
+| stac-browser | 7 | 1 | 16 | 15 | 1 | 0 | 1 | 27 |
+| stac-manager | 0 | 3 | 33 | 38 | 3 | 1 | 4 | 63 |
+| **pod total** | 146 | 330 | 1508 | 730 | 282 | 313 | 304 |  |
+
+## CPU-seconds consumed per phase (cgroup cpu.stat; robust for bursts shorter than a 2 s sample)
+
+| container | titiler (50 s) | tipg (2 s) | stac (1 s) | kernel (23 s) | all (55 s) |
+|---|---|---|---|---|---|
+| lab | 1.7 | 0.2 | 0.0 | 4.7 | 3.5 |
+| database | 3.8 | 1.6 | 0.2 | 0.3 | 2.4 |
+| stac-fastapi | 0.1 | 0.0 | 0.1 | 0.1 | 0.2 |
+| titiler-pgstac | 9.4 | 0.1 | 0.0 | 1.1 | 9.6 |
+| tipg | 0.3 | 0.3 | 0.0 | 0.0 | 0.5 |
+| stac-auth-proxy | 0.7 | 0.0 | 0.6 | 0.1 | 0.9 |
+| mock-oidc | 0.2 | 0.0 | 0.0 | 0.0 | 0.1 |
+| stac-browser | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| stac-manager | 0.1 | 0.0 | 0.1 | 0.1 | 0.1 |
+| **pod total** | 16.4 | 2.3 | 1.0 | 6.4 | 17.3 |
+
+## Peak memory per phase (MiB, docker stats; '-' = phase shorter than one 2 s sample)
+
+| container | titiler | tipg | stac | kernel | all |
+|---|---|---|---|---|---|
+| lab | 217 | - | - | 1472 | 1442 |
+| database | 266 | - | - | 298 | 301 |
+| stac-fastapi | 88 | - | - | 95 | 95 |
+| titiler-pgstac | 371 | - | - | 370 | 372 |
+| tipg | 130 | - | - | 131 | 132 |
+| stac-auth-proxy | 170 | - | - | 170 | 169 |
+| mock-oidc | 44 | - | - | 44 | 44 |
+| stac-browser | 21 | - | - | 21 | 21 |
+| stac-manager | 79 | - | - | 44 | 44 |
+
+## Lab container processes at each snapshot (RSS MiB; our kernel lives between snapshots, see kernel.* lines)
+
+| snapshot | jupyter processes (server + any jupyter CLI) | kernels (id=RSS; external = not started by the Lab) |
+|---|---|---|
+| pre-idle | 138 | - |
+| pre-titiler | 138 | - |
+| post-titiler | 140 | 3619d1fa=56 |
+| pre-tipg | 140 | 3619d1fa=56 |
+| post-tipg | 140 | 3619d1fa=56 |
+| pre-stac | 140 | 3619d1fa=56 |
+| post-stac | 140 | 3619d1fa=56 |
+| pre-kernel | 140 | 3619d1fa=56 |
+| post-kernel | 140 | 3619d1fa=56 |
+| pre-all | 140 | 3619d1fa=56 |
+| post-all | 141 | - |
+
+Lab peak: 1950 MiB as measured (kernel GDAL cache uncapped), 1608 MiB with the kernel peak from the 3 GiB-limited run (limit rule uses this).
+
+## Recommended requests/limits per container (derived by the rules in analyze.py)
+
+| container | cpu request | cpu limit | memory request | memory limit |
+|---|---|---|---|---|
+| lab | 80m | none | 768Mi | 2560Mi |
+| database | 60m | none | 384Mi | 640Mi |
+| stac-fastapi | 10m | none | 128Mi | 192Mi |
+| titiler-pgstac | 140m | none | 464Mi | 768Mi |
+| tipg | 10m | none | 176Mi | 320Mi |
+| stac-auth-proxy | 20m | none | 224Mi | 384Mi |
+| mock-oidc | 10m | none | 64Mi | 128Mi |
+| stac-browser | 10m | none | 32Mi | 128Mi |
+| stac-manager | 10m | none | 80Mi | 192Mi |
+| **pod** | 350m |  | 2320Mi | 5312Mi |
+
+Lab memory request profiles: notebooks = 768Mi (used above); 500 MB raster held in the kernel = 1280Mi (kernel held RSS 799 MiB).
+
+## Participant pods per node (requests-based)
+
+| Lab request profile | node | allocatable CPU / GiB | pod requests CPU / GiB | pods (no DaemonSets) | pods (minus assumed DS 0.25 CPU / 0.25 GiB) | binding | memory limits / allocatable at that density | nodes for 10 / 20 / 40 users (+1 spare) |
+|---|---|---|---|---|---|---|---|---|
+| Lab: notebooks | b3-8 (measured) | 1.84 / 5.77 | 0.35 / 2.27 | 2 | 2 | memory | 1.8x | 6 / 11 / 21 |
+| Lab: notebooks | b3-16 (extrap., proportional) | 3.68 / 11.54 | 0.35 / 2.27 | 5 | 4 | memory | 1.8x | 4 / 6 / 11 |
+| Lab: notebooks | b3-16 (extrap., fixed reserve) | 3.84 / 13.22 | 0.35 / 2.27 | 5 | 5 | memory | 2.0x | 3 / 5 / 9 |
+| Lab: notebooks | b3-32 (extrap., proportional) | 7.36 / 23.08 | 0.35 / 2.27 | 10 | 10 | memory | 2.2x | 2 / 3 / 5 |
+| Lab: notebooks | b3-32 (extrap., fixed reserve) | 7.84 / 28.12 | 0.35 / 2.27 | 12 | 12 | memory | 2.2x | 2 / 3 / 5 |
+| Lab: 500 MB raster held | b3-8 (measured) | 1.84 / 5.77 | 0.35 / 2.77 | 2 | 1 | memory | 0.9x | 11 / 21 / 41 |
+| Lab: 500 MB raster held | b3-16 (extrap., proportional) | 3.68 / 11.54 | 0.35 / 2.77 | 4 | 4 | memory | 1.8x | 4 / 6 / 11 |
+| Lab: 500 MB raster held | b3-16 (extrap., fixed reserve) | 3.84 / 13.22 | 0.35 / 2.77 | 4 | 4 | memory | 1.6x | 4 / 6 / 11 |
+| Lab: 500 MB raster held | b3-32 (extrap., proportional) | 7.36 / 23.08 | 0.35 / 2.77 | 8 | 8 | memory | 1.8x | 3 / 4 / 6 |
+| Lab: 500 MB raster held | b3-32 (extrap., fixed reserve) | 7.84 / 28.12 | 0.35 / 2.77 | 10 | 10 | memory | 1.8x | 2 / 3 / 5 |
+| chart values.yaml as committed | b3-8 (measured) | 1.84 / 5.77 | 0.37 / 2.72 | 2 | 2 | memory | 2.1x | 6 / 11 / 21 |
+| chart values.yaml as committed | b3-16 (extrap., proportional) | 3.68 / 11.54 | 0.37 / 2.72 | 4 | 4 | memory | 2.1x | 4 / 6 / 11 |
+| chart values.yaml as committed | b3-16 (extrap., fixed reserve) | 3.84 / 13.22 | 0.37 / 2.72 | 4 | 4 | memory | 1.8x | 4 / 6 / 11 |
+| chart values.yaml as committed | b3-32 (extrap., proportional) | 7.36 / 23.08 | 0.37 / 2.72 | 8 | 8 | memory | 2.1x | 3 / 4 / 6 |
+| chart values.yaml as committed | b3-32 (extrap., fixed reserve) | 7.84 / 28.12 | 0.37 / 2.72 | 10 | 10 | memory | 2.1x | 2 / 3 / 5 |
+
+Chart (spike/chart/values.yaml) vs this run's rule (MiB / millicores): lab req 1024->768 lim 3072->2560 cpu 100m->80m; database req 560->384 lim 960->640 cpu 60m->60m; stac-fastapi req 176->128 lim 320->192 cpu 10m->10m; titiler-pgstac req 432->464 lim 704->768 cpu 120m->140m; stac-auth-proxy req 224->224 lim 384->384 cpu 40m->20m; mock-oidc req 80->64 lim 128->128 cpu 10m->10m; stac-manager req 80->80 lim 128->192 cpu 10m->10m
+
+## Images (local `docker image ls` = arm64 unpacked unless noted; pull = linux/amd64 compressed from the registry)
+
+| image | pull (amd64, compressed) |
+|---|---|
+| lab (published base: workshop image): `ghcr.io/developmentseed/eoapi-workshop:latest` | 1822 MiB |
+| database (base: pgstac): `ghcr.io/stac-utils/pgstac:v0.9.11` | 258 MiB |
+| stac-fastapi: `ghcr.io/stac-utils/stac-fastapi-pgstac:7.0.0` | 73 MiB |
+| titiler-pgstac: `ghcr.io/stac-utils/titiler-pgstac:3.2.0` | 138 MiB |
+| tipg: `ghcr.io/developmentseed/tipg:1.6.1` | 63 MiB |
+| stac-auth-proxy: `ghcr.io/developmentseed/stac-auth-proxy:v1.2.0` | 61 MiB |
+| mock-oidc: `ghcr.io/alukach/mock-oidc-server@sha256:5972adac0b6e3a094ea043be0f1851c65e3fd54e17a546f0b71dedd17c7a2d6a` | 161 MiB |
+| stac-browser: `ghcr.io/radiantearth/stac-browser:5.1.0` | 47 MiB |
+| stac-manager: `ghcr.io/developmentseed/stac-manager:1.0.3` | 814 MiB |
+| **unique total (shared layers counted once)** | 3437 MiB |
+
+## Local `docker image ls` sizes
+
+| image | size |
+|---|---|
+| eoapi-spike-db:latest | 1.13GB |
+| eoapi-spike-lab:latest | 6.68GB |
+| ghcr.io/stac-utils/stac-fastapi-pgstac:7.0.0 | 362MB |
+| ghcr.io/stac-utils/titiler-pgstac:3.2.0 | 1.23GB |
+| ghcr.io/radiantearth/stac-browser:5.1.0 | 223MB |
+| ghcr.io/developmentseed/tipg:1.6.1 | 279MB |
+| ghcr.io/developmentseed/stac-auth-proxy:v1.2.0 | 289MB |
+| ghcr.io/developmentseed/stac-manager:1.0.3 | 3.75GB |
+| ghcr.io/alukach/mock-oidc-server:latest | 629MB |
+| eoapi-spike-lab:latest (arch) | arm64 |
+| eoapi-spike-db:latest (arch) | arm64 |

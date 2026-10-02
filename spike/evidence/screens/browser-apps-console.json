@@ -1,0 +1,1048 @@
+[
+ {
+  "step": "lab.wrong-password",
+  "kind": "http",
+  "status": 401,
+  "method": "POST",
+  "url": "http://localhost:18888/login?next=%2Flab%2Fworkspaces%2Fspike-browser-apps",
+  "class": "expected: wrong-password probe"
+ },
+ {
+  "step": "lab.wrong-password",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+  "where": "http://localhost:18888/login?next=%2Flab%2Fworkspaces%2Fspike-browser-apps",
+  "class": "expected: wrong-password probe"
+ },
+ {
+  "step": "lab.password-login",
+  "kind": "requestfailed",
+  "method": "PUT",
+  "url": "http://localhost:18888/lab/api/workspaces/spike-browser-apps?1790925501297",
+  "error": "net::ERR_ABORTED",
+  "class": "harmless: JupyterLab workspace PUT gets its 204, then Chromium reports the unread body as aborted"
+ },
+ {
+  "step": "lab.password-login",
+  "kind": "requestfailed",
+  "method": "PUT",
+  "url": "http://localhost:18888/lab/api/workspaces/spike-browser-apps?1790925501839",
+  "error": "net::ERR_ABORTED",
+  "class": "harmless: JupyterLab workspace PUT gets its 204, then Chromium reports the unread body as aborted"
+ },
+ {
+  "step": "browser.catalog",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.catalog",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.catalog",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/ AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.catalog",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.catalog",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.catalog",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/glad-global-forest-change-1.11 AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-Dqm",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/ind",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.collection",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/glad-global-forest-change-1.11 AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-Dqm",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.item",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items/hansen-gfc-2023-v1.11-80N-180W",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.item",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items/hansen-gfc-2023-v1.11-80N-180W",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.item",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items/hansen-gfc-2023-v1.11-80N-180W AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://loc",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.item",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.item",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.item",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/glad-global-forest-change-1.11 AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-Dqm",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items/hansen-gfc-2023-v1.11-80N-180W",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items/hansen-gfc-2023-v1.11-80N-180W",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/glad-global-forest-change-1.11/items/hansen-gfc-2023-v1.11-80N-180W AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://loc",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/glad-global-forest-change-1.11 AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-Dqm",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/glad-global-forest-change-1.11",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.deep-link-reload",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/glad-global-forest-change-1.11 AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-Dqm",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/ AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "http://localhost:18888/stac/collections/private-spike-browser-apps-notes",
+  "class": "expected: anonymous deep link to a private collection"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "where": "http://localhost:18888/stac/collections/private-spike-browser-apps-notes",
+  "class": "expected: anonymous deep link to a private collection"
+ },
+ {
+  "step": "browser.private-hidden-anon",
+  "kind": "console",
+  "text": "AxiosError: Request failed with status code 404\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)\n    at ws.request (http://localhost:18888/browser/assets/index-DqmjzHhT.js:17:2289)\n",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "expected: anonymous deep link to a private collection"
+ },
+ {
+  "step": "browser.oidc-redirect-uri",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.oidc-redirect-uri",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.oidc-redirect-uri",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/ AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.oidc-redirect-uri",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.oidc-redirect-uri",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.oidc-redirect-uri",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/ AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "requestfailed",
+  "method": "GET",
+  "url": "http://localhost:18888/stac/collections?sortby=title",
+  "error": "net::ERR_ABORTED",
+  "class": "expected: request cancelled by a page navigation or a map pan/zoom"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/ AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:19583)",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "http",
+  "status": 405,
+  "method": "OPTIONS",
+  "url": "http://localhost:18888/stac/collections/private-spike-browser-apps-notes",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 405 (Method Not Allowed)",
+  "where": "http://localhost:18888/stac/collections/private-spike-browser-apps-notes",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "browser.private-visible",
+  "kind": "console",
+  "text": "Failed to check permissions for http://localhost:18888/stac/collections/private-spike-browser-apps-notes AxiosError: Request failed with status code 405\n    at Kb (http://localhost:18888/browser/assets/index-DqmjzHhT.js:15:12184)\n    at XMLHttpRequest.d (http://localhost:18888/browser/assets/index-D",
+  "where": "http://localhost:18888/browser/assets/index-DqmjzHhT.js",
+  "class": "upstream: STAC Browser's OPTIONS permission probe gets 405 from stac-fastapi itself (probe browser.options-405-is-upstream)"
+ },
+ {
+  "step": "manager.deep-link-reload",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "http://localhost:18888/manager/collections/glad-global-forest-change-1.11/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.deep-link-reload",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "where": "http://localhost:18888/manager/collections/glad-global-forest-change-1.11/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.deep-link-reload",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "http://localhost:18888/manager/collections/glad-global-forest-change-1.11/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.deep-link-reload",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "where": "http://localhost:18888/manager/collections/glad-global-forest-change-1.11/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.oidc-login",
+  "kind": "requestfailed",
+  "method": "POST",
+  "url": "http://localhost:18888/stac/search",
+  "error": "net::ERR_ABORTED",
+  "class": "expected: request cancelled by a page navigation or a map pan/zoom"
+ },
+ {
+  "step": "manager.oidc-login",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "http://localhost:18888/manager/collections/glad-global-forest-change-1.11/?code=<redacted>&state=<redacted>",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.oidc-login",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "where": "http://localhost:18888/manager/collections/glad-global-forest-change-1.11/?code=<redacted>&state=<redacted>",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.oidc-login",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "https://www.gravatar.com/avatar/?d=404",
+  "class": "external: stac-manager avatar lookup (gravatar d=404)"
+ },
+ {
+  "step": "manager.oidc-login",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 ()",
+  "where": "https://www.gravatar.com/avatar/?d=404",
+  "class": "external: stac-manager avatar lookup (gravatar d=404)"
+ },
+ {
+  "step": "manager.create-as-deployed",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "http://localhost:18888/manager/collections/new/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.create-as-deployed",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "where": "http://localhost:18888/manager/collections/new/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.create-as-deployed",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "https://www.gravatar.com/avatar/?d=404",
+  "class": "external: stac-manager avatar lookup (gravatar d=404)"
+ },
+ {
+  "step": "manager.create-as-deployed",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 ()",
+  "where": "https://www.gravatar.com/avatar/?d=404",
+  "class": "external: stac-manager avatar lookup (gravatar d=404)"
+ },
+ {
+  "step": "manager.edit-as-deployed",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "http://localhost:18888/manager/collections/spike-browser-apps-test/edit/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.edit-as-deployed",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "where": "http://localhost:18888/manager/collections/spike-browser-apps-test/edit/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.edit-as-deployed",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "https://www.gravatar.com/avatar/?d=404",
+  "class": "external: stac-manager avatar lookup (gravatar d=404)"
+ },
+ {
+  "step": "manager.edit-as-deployed",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 ()",
+  "where": "https://www.gravatar.com/avatar/?d=404",
+  "class": "external: stac-manager avatar lookup (gravatar d=404)"
+ },
+ {
+  "step": "manager.delete",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "http://localhost:18888/manager/collections/spike-browser-apps-test/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.delete",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "where": "http://localhost:18888/manager/collections/spike-browser-apps-test/",
+  "class": "known: stac-manager deep links are served by http-server's 404.html fallback (the app renders)"
+ },
+ {
+  "step": "manager.delete",
+  "kind": "http",
+  "status": 404,
+  "method": "GET",
+  "url": "https://www.gravatar.com/avatar/?d=404",
+  "class": "external: stac-manager avatar lookup (gravatar d=404)"
+ },
+ {
+  "step": "manager.delete",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 404 ()",
+  "where": "https://www.gravatar.com/avatar/?d=404",
+  "class": "external: stac-manager avatar lookup (gravatar d=404)"
+ },
+ {
+  "step": "iframe",
+  "kind": "requestfailed",
+  "method": "PUT",
+  "url": "http://localhost:18888/lab/api/workspaces/spike-browser-apps?1790925535250",
+  "error": "net::ERR_ABORTED",
+  "class": "harmless: JupyterLab workspace PUT gets its 204, then Chromium reports the unread body as aborted"
+ },
+ {
+  "step": "iframe",
+  "kind": "requestfailed",
+  "method": "PUT",
+  "url": "http://localhost:18888/lab/api/workspaces/spike-browser-apps?1790925536332",
+  "error": "net::ERR_ABORTED",
+  "class": "harmless: JupyterLab workspace PUT gets its 204, then Chromium reports the unread body as aborted"
+ },
+ {
+  "step": "iframe",
+  "kind": "requestfailed",
+  "method": "GET",
+  "url": "http://localhost:18888/vector/collections/features.ecoregions/tiles/WebMercatorQuad/1/0/0",
+  "error": "net::ERR_ABORTED",
+  "class": "expected: request cancelled by a page navigation or a map pan/zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "requestfailed",
+  "method": "GET",
+  "url": "http://localhost:18888/vector/collections/features.ecoregions/tiles/WebMercatorQuad/1/1/0",
+  "error": "net::ERR_ABORTED",
+  "class": "expected: request cancelled by a page navigation or a map pan/zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "requestfailed",
+  "method": "GET",
+  "url": "http://localhost:18888/vector/collections/features.ecoregions/tiles/WebMercatorQuad/1/0/1",
+  "error": "net::ERR_ABORTED",
+  "class": "expected: request cancelled by a page navigation or a map pan/zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "requestfailed",
+  "method": "GET",
+  "url": "http://localhost:18888/vector/collections/features.ecoregions/tiles/WebMercatorQuad/1/1/1",
+  "error": "net::ERR_ABORTED",
+  "class": "expected: request cancelled by a page navigation or a map pan/zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "requestfailed",
+  "method": "PUT",
+  "url": "http://localhost:18888/lab/api/workspaces/spike-browser-apps?1790925537068",
+  "error": "net::ERR_ABORTED",
+  "class": "harmless: JupyterLab workspace PUT gets its 204, then Chromium reports the unread body as aborted"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://a.tile.openstreetmap.org/0/2/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://a.tile.openstreetmap.org/0/2/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://a.tile.openstreetmap.org/0/-2/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://a.tile.openstreetmap.org/0/-2/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://b.tile.openstreetmap.org/0/1/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://b.tile.openstreetmap.org/0/1/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://b.tile.openstreetmap.org/0/-2/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://b.tile.openstreetmap.org/0/-2/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://c.tile.openstreetmap.org/0/-2/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://c.tile.openstreetmap.org/0/-2/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://c.tile.openstreetmap.org/0/1/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://c.tile.openstreetmap.org/0/1/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://b.tile.openstreetmap.org/0/0/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://b.tile.openstreetmap.org/0/0/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://b.tile.openstreetmap.org/0/-1/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://b.tile.openstreetmap.org/0/-1/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://b.tile.openstreetmap.org/0/0/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://b.tile.openstreetmap.org/0/0/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://c.tile.openstreetmap.org/0/-1/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://c.tile.openstreetmap.org/0/-1/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://b.tile.openstreetmap.org/0/2/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://b.tile.openstreetmap.org/0/2/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://c.tile.openstreetmap.org/0/2/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://c.tile.openstreetmap.org/0/2/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://a.tile.openstreetmap.org/0/-1/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://a.tile.openstreetmap.org/0/-1/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://a.tile.openstreetmap.org/0/1/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://a.tile.openstreetmap.org/0/1/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/-1/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/-1/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/0/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/0/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/-1/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/-1/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/1/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/1/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/-1/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/-1/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/-2/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/-2/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/2/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/2/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/-2/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/-2/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/2/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/2/1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/2/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/2/0.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "http",
+  "status": 400,
+  "method": "GET",
+  "url": "https://tile.openstreetmap.org/1/-2/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ },
+ {
+  "step": "iframe",
+  "kind": "console",
+  "text": "Failed to load resource: the server responded with a status of 400 ()",
+  "where": "https://tile.openstreetmap.org/1/-2/-1.png",
+  "class": "external: map.html viewers ask OSM for out-of-range tiles (x or y outside 0..2^z-1) at low zoom"
+ }
+]

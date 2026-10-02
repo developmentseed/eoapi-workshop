@@ -1,0 +1,31 @@
+PASS sampler.cadence — 91 docker-stats rounds x 9 containers, median interval 2.02 s, max 2.56 s (FAIL if median > 2.5 s or any gap > 5 s)
+PASS sampler.idle-samples — 3 rounds in the idle window
+PASS load.titiler-a — 200/200 2xx codes={'200': 197, '204': 3} wall=48.7s p50=0.854s p95=2.108s max=4.298s c=4 seed=1790880490 lon_shift=-5.94
+PASS load.tipg-a — 100/100 2xx codes={'200': 100} wall=0.7s p50=0.006s p95=0.134s max=0.458s c=4 seed=1790880490 lon_shift=-5.94
+PASS load.stac-a — 50/50 2xx codes={'200': 50} wall=0.6s p50=0.046s p95=0.077s max=0.092s c=4 seed=1790880490 lon_shift=-5.94
+PASS load.tipg-b — 100/100 2xx codes={'200': 100} wall=0.5s p50=0.014s p95=0.052s max=0.192s c=4 seed=1790880490 lon_shift=-5.94
+PASS load.stac-b — 50/50 2xx codes={'200': 50} wall=0.8s p50=0.055s p95=0.118s max=0.164s c=4 seed=1790880490 lon_shift=-5.94
+PASS load.titiler-b — 200/200 2xx codes={'204': 6, '200': 194} wall=54.5s p50=0.987s p95=2.629s max=4.884s c=4 seed=1790880490 lon_shift=-5.94
+PASS kernel.rioxarray-500MB — 478 MiB uint8 [22400, 22400] in 6.8 s; kernel RSS start=55 imported=152 loaded=1141 computed=1141 freed=612 MiB; PEAK (VmHWM)=1619 MiB; GDAL_CACHEMAX=1199 MiB; other kernels at start: ['3619d1fa']
+PASS kernel.rioxarray-500MB-concurrent — 478 MiB uint8 [22400, 22400] in 6.5 s; kernel RSS start=55 imported=152 loaded=1141 computed=1141 freed=612 MiB; PEAK (VmHWM)=1619 MiB; GDAL_CACHEMAX=1199 MiB; other kernels at start: ['3619d1fa']
+PASS kernel.rioxarray-500MB-under-3GiB-limit — same job, --memory 3g: GDAL_CACHEMAX=153 MiB; RSS imported=134 loaded=799 held=799 freed=321 MiB; PEAK (VmHWM)=1277 MiB; not OOM-killed
+PASS mem.lab — idle 189 MiB, load median 259, peak 1950, after load 231 (cgroup memory.peak incl. page cache 2150); CPU idle 5.2%, avg under load 73m, busiest phase 204m, peak 1-s sample 90%
+PASS mem.database — idle 176 MiB, load median 298, peak 302, after load 302 (cgroup memory.peak incl. page cache 434); CPU idle 1.6%, avg under load 56m, busiest phase 1092m, peak 1-s sample 124%
+PASS mem.stac-fastapi — idle 88 MiB, load median 95, peak 95, after load 95 (cgroup memory.peak incl. page cache 128); CPU idle 0.6%, avg under load 4m, busiest phase 54m, peak 1-s sample 4%
+PASS mem.titiler-pgstac — idle 360 MiB, load median 370, peak 372, after load 370 (cgroup memory.peak incl. page cache 411); CPU idle 0.1%, avg under load 138m, busiest phase 189m, peak 1-s sample 32%
+PASS mem.tipg — idle 130 MiB, load median 131, peak 132, after load 132 (cgroup memory.peak incl. page cache 149); CPU idle 0.4%, avg under load 9m, busiest phase 208m, peak 1-s sample 15%
+PASS mem.stac-auth-proxy — idle 170 MiB, load median 170, peak 170, after load 169 (cgroup memory.peak incl. page cache 218); CPU idle 4.5%, avg under load 16m, busiest phase 436m, peak 1-s sample 33%
+PASS mem.mock-oidc — idle 44 MiB, load median 44, peak 44, after load 44 (cgroup memory.peak incl. page cache 58); CPU idle 1.5%, avg under load 3m, busiest phase 5m, peak 1-s sample 6%
+PASS mem.stac-browser — idle 19 MiB, load median 21, peak 27, after load 21 (cgroup memory.peak incl. page cache 29); CPU idle 0.7%, avg under load 1m, busiest phase 16m, peak 1-s sample 3%
+PASS mem.stac-manager — idle 60 MiB, load median 44, peak 79, after load 44 (cgroup memory.peak incl. page cache 112); CPU idle 0.0%, avg under load 4m, busiest phase 38m, peak 1-s sample 6%
+PASS plan.backend-idle-under-1.5GiB — backend (all but Lab) idle = 1046 MiB with one uvicorn worker each (skeptic review claim)
+PASS plan.participant-under-3.5GiB-local-no-limit — pod total at its busiest moment as measured = 3.05 GiB (no memory limit, kernel GDAL cache 1619 MiB peak); this is what a laptop compose stack uses
+PASS plan.participant-under-3.5GiB-k8s-estimate — pod total at its busiest moment = 2.72 GiB with the k8s-limited kernel peak (ESTIMATE: the stack itself ran without limits; sum of per-container peaks, never simultaneous, = 3.10 GiB). Load = synthetic tiles + 500 MB raster kernel, heavier than notebooks (plan: 2.5-3.5 GiB per participant under notebook load)
+PASS plan.b3-8-holds-2-pods — per b3-8 after ASSUMED DaemonSet requests 0.25 GiB: this run's rule 2 pods, chart values 2; this run's rule: pod 2.27 GiB, 0.99 GiB left with 2 pods (2 fit only if real DaemonSets request < 1.24 GiB); chart values: pod 2.72 GiB, 0.08 GiB left with 2 pods (2 fit only if real DaemonSets request < 0.33 GiB); 1 if every Lab holds the raster (skeptic: ~2)
+PASS plan.20-users-on-4-5-b3-16 — per b3-16 (EXTRAPOLATED, proportional): this run's rule 4 pods, chart values 4 -> 6 b3-16 for 20 users incl. 1 spare at the lower density (skeptic: 4-5 + 1 spare)
+PASS chart.requests-cover-steady — chart memory request >= steady working set (max of idle, load median, after load) for every container; below: none; not parsed: none
+PASS chart.limits-cover-peaks — chart memory limit >= measured peak (Lab: k8s-adjusted 1608 MiB) for every container; below: none
+PASS images.lab-pull-1.8GiB — ghcr.io/developmentseed/eoapi-workshop:latest linux/amd64 compressed = 1.78 GiB
+PASS images.per-node-prepull — all 9 images, linux/amd64, unique compressed layers = 3.36 GiB per node (stac-manager alone 0.79 GiB)
+PASS disk.ephemeral — stac-manager=27.3MB (virtual 2.92GB); stac-browser=123kB (virtual 174MB); stac-auth-proxy=283kB (virtual 225MB); titiler-pgstac=4.1kB (virtual 477MB); tipg=4.1kB (virtual 215MB); stac-fastapi=4.1kB (virtual 285MB); database=20.5kB (virtual 822MB); mock-oidc=10.3MB (virtual 476MB); lab=13.9MB (virtual 4.83GB); pgdata MiB=184
+PASS gdal.cachemax-cgroup-aware — default GDAL_CACHEMAX in the Lab image: 1199 MiB without a memory limit, 204 MiB under --memory 4g
