@@ -9,7 +9,7 @@ services:
       - PGPASSWORD=password
       - PGDATABASE=postgis
     ports:
-      - 5439:5432
+      - 127.0.0.1:5439:5432
     command: postgres -N 500
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -62,7 +62,7 @@ services:
   stac-fastapi:
     image: ghcr.io/stac-utils/stac-fastapi-pgstac:6.2.2
     ports:
-      - 8081:8081
+      - 127.0.0.1:8081:8081
     environment:
       # Postgres connection
       - POSTGRES_USER=username
@@ -85,7 +85,7 @@ services:
   mock-oidc:
     image: ghcr.io/alukach/mock-oidc-server:latest
     ports:
-      - 8085:8888
+      - 127.0.0.1:8085:8888
     environment:
       - ISSUER=http://localhost:8085
       - PORT=8888
@@ -94,7 +94,7 @@ services:
   stac-auth-proxy:
     image: ghcr.io/developmentseed/stac-auth-proxy:latest
     ports:
-      - 8084:8000
+      - 127.0.0.1:8084:8000
     environment:
       - UPSTREAM_URL=http://stac-fastapi:8081
       - OIDC_DISCOVERY_URL=http://localhost:8085/.well-known/openid-configuration
@@ -128,7 +128,7 @@ services:
     platform: linux/amd64
     image: ghcr.io/stac-utils/titiler-pgstac:3.0.0
     ports:
-      - 8082:8082
+      - 127.0.0.1:8082:8082
     environment:
       # Postgres connection
       - PGUSER=username
@@ -169,7 +169,7 @@ services:
   tipg:
     image: ghcr.io/developmentseed/tipg:1.4.0
     ports:
-      - 8083:8083
+      - 127.0.0.1:8083:8083
     environment:
       # Postgres connection
       - POSTGRES_USER=username
@@ -191,7 +191,7 @@ services:
   stac-browser:
     image: ghcr.io/radiantearth/stac-browser:latest
     ports:
-      - 8080:8080
+      - 127.0.0.1:8080:8080
     environment:
       SB_catalogUrl: "http://localhost:8084"
       # # Chapter 8: log in against the mock OIDC server. `historyMode` must be
@@ -212,7 +212,7 @@ services:
     platform: linux/amd64
     image: ghcr.io/developmentseed/stac-manager:1.0.3
     ports:
-      - 8086:8080
+      - 127.0.0.1:8086:8080
     environment:
       - PUBLIC_URL=http://localhost:8086
       - REACT_APP_STAC_API=http://localhost:8084
@@ -230,7 +230,7 @@ services:
       context: .
       dockerfile: Dockerfile.local
     ports:
-      - 8888:8888
+      - 127.0.0.1:8888:8888
     volumes:
       - ./docs:/home/jovyan/docs
     environment:
