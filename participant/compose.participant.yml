@@ -5,8 +5,8 @@
 # jupyter-server-proxy at http://localhost:18888/<prefix>/ (see
 # lab/jupyter_server_config.py), behind the Lab login.
 #
-#   ./gen-env.sh                      # once: random secrets into spike/.env
-#   docker compose -p eoapi-spike -f compose.participant.yml up -d --build --wait
+#   ./gen-env.sh                      # once: random secrets into participant/.env
+#   docker compose -p eoapi-participant -f compose.participant.yml up -d --build --wait
 #
 # Every service but the Lab binds 127.0.0.1: another pod (or container) cannot
 # reach it around the Lab login. On k8s keep the NetworkPolicy too.
@@ -27,7 +27,7 @@ x-pg: &pg
 services:
   lab:
     build: lab
-    image: eoapi-spike-lab
+    image: eoapi-participant-lab
     ports:
       - "127.0.0.1:18888:18888"
     volumes:
@@ -53,7 +53,7 @@ services:
 
   database:
     build: db
-    image: eoapi-spike-db
+    image: eoapi-participant-db
     network_mode: service:lab
     environment:
       POSTGRES_USER: eoapi

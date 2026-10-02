@@ -1,6 +1,6 @@
 # Build the base first (repo root):
-#   docker build -f Dockerfile.local -t eoapi-spike-lab-base .
-FROM eoapi-spike-lab-base
+#   docker build -f Dockerfile.local -t eoapi-participant-lab-base .
+FROM eoapi-participant-lab-base
 
 USER root
 RUN /entrypoint.sh pip install --no-cache-dir jupyter-server-proxy==4.6.0

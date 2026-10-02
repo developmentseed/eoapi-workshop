@@ -77,7 +77,7 @@ variable "node_count" {
 }
 
 variable "workshop_node_count" {
-  description = "Nodes in the extra `workshop` pool (0 = no pool). 20 participants need 6× b3-16 or 3–4× b3-32, one spare included (spike/README.md \"Sizing\")."
+  description = "Nodes in the extra `workshop` pool (0 = no pool). 20 participants need 6× b3-16 or 3–4× b3-32, one spare included (participant/README.md \"Sizing\")."
   type        = number
   default     = 0
 }

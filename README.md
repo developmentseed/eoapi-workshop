@@ -109,7 +109,7 @@ If you are interested deploying a production-ready version of the eoAPI stack, y
 ## Deploying to Kubernetes
 
 To run the workshop on a Kubernetes cluster, with a full eoAPI stack and
-JupyterLab for each participant, see [`spike/README.md`](./spike/README.md).
+JupyterLab for each participant, see [`participant/README.md`](./participant/README.md).
 [`infrastructure/terraform`](./infrastructure/terraform/README.md) provisions an
 OVH cluster for it, or adds a workshop node pool to an existing one.
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Write spike/.env once (gitignored): random DB password, Lab password and token.
+# Write participant/.env once (gitignored): random DB password, Lab password and token.
 set -eu
 f="$(cd "$(dirname "$0")" && pwd)/.env"
 if [ -f "$f" ]; then echo "$f exists; delete it to regenerate"; exit 0; fi

@@ -32,7 +32,7 @@ resource "ovh_cloud_project_kube_nodepool" "workers" {
 
 # Extra capacity for the workshop itself, on top of `workers`. Off by default;
 # set workshop_node_count (e.g. 6 for 20 participants) before the workshop and
-# back to 0 after. Nodes are labelled nodepool=workshop, which spike/chart's
+# back to 0 after. Nodes are labelled nodepool=workshop, which participant/chart's
 # `nodeSelector` targets. (workshop-pool/ does the same for a cluster this stack
 # didn't create.)
 resource "ovh_cloud_project_kube_nodepool" "workshop" {

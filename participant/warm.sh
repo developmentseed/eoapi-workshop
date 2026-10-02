@@ -2,7 +2,7 @@
 # Warm every participant's titiler: notebook 04's world-view glad tile takes about
 # 2 minutes cold and about a second warm. Run after each deploy or pod restart.
 #
-#   spike/warm.sh CONTEXT NAMESPACE        # RELEASE=participants, PARALLEL=5
+#   participant/warm.sh CONTEXT NAMESPACE        # RELEASE=participants, PARALLEL=5
 set -euo pipefail
 [ $# = 2 ] || { sed -n '2,5p' "$0" >&2; exit 2; }
 CTX=$1 NS=$2 REL=${RELEASE:-participants}

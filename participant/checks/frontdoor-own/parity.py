@@ -13,14 +13,17 @@ import sys
 
 import yaml
 
-SPIKE = pathlib.Path(__file__).resolve().parents[2]
+ROOT = pathlib.Path(__file__).resolve().parents[2]
 CHART_ORIGIN, COMPOSE_ORIGIN = (
-    "http://lab-u01.spike.local:18080",
+    "http://lab-u01.participant.local:18080",
     "http://localhost:18888",
 )
 
-BUILT = {"eoapi-spike-lab": "eoapi-workshop-lab", "eoapi-spike-db": "eoapi-workshop-db"}
-compose = yaml.safe_load((SPIKE / "compose.participant.yml").read_text())["services"]
+BUILT = {
+    "eoapi-participant-lab": "eoapi-workshop-lab",
+    "eoapi-participant-db": "eoapi-workshop-db",
+}
+compose = yaml.safe_load((ROOT / "compose.participant.yml").read_text())["services"]
 pod = next(
     d
     for d in yaml.safe_load_all(sys.stdin)

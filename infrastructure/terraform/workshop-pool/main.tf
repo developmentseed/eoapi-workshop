@@ -3,7 +3,7 @@
 # before the workshop, destroy it after. For a cluster created by ../, set
 # `workshop_node_count` there instead.
 #
-# Nodes are labelled `nodepool=<pool_name>` by OVH; spike/chart pins the
+# Nodes are labelled `nodepool=<pool_name>` by OVH; participant/chart pins the
 # participant pods to them with `nodeSelector: { nodepool: workshop }`.
 
 terraform {
@@ -39,7 +39,7 @@ variable "node_flavor" {
 }
 
 variable "node_count" {
-  description = "Number of nodes in the pool. 20 participants need 6× b3-16 or 3–4× b3-32, one spare included (spike/README.md \"Sizing\")"
+  description = "Number of nodes in the pool. 20 participants need 6× b3-16 or 3–4× b3-32, one spare included (participant/README.md \"Sizing\")"
   type        = number
   default     = 3
 }

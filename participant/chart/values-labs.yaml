@@ -1,5 +1,5 @@
 # The OVH cluster "labs", namespace eoapi-workshop:
-#   VALUES=spike/chart/values-labs.yaml spike/deploy.sh <context> eoapi-workshop up sha-<commit> u01 u02 u03
+#   VALUES=participant/chart/values-labs.yaml participant/deploy.sh <context> eoapi-workshop up sha-<commit> u01 u02 u03
 # *.eoapi-workshop.ds.io resolves to the cluster's ingress-nginx.
 host: lab-%s.eoapi-workshop.ds.io
 origin: https://lab-%s.eoapi-workshop.ds.io

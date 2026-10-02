@@ -3,13 +3,13 @@ participants: [u01, u02]
 
 # printf patterns, %s = participant id. `origin` is what the browser sees
 # (scheme://host[:port]); kind publishes the ingress on 127.0.0.1:18080.
-host: lab-%s.spike.local
-origin: http://lab-%s.spike.local:18080
+host: lab-%s.participant.local
+origin: http://lab-%s.participant.local:18080
 
 # The Lab and DB images are built for amd64 and pushed by
 # .github/workflows/publish-participant-images.yml as
 # <registry>/eoapi-workshop-{lab,db}:sha-<commit>. Pin that tag, never :latest.
-# `local` = images tagged and `kind load`ed by hand (spike/README.md).
+# `local` = images tagged and `kind load`ed by hand (participant/README.md).
 image:
   registry: ghcr.io/developmentseed
   tag: local
@@ -51,12 +51,12 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"  # kernel websockets
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 
-# The containers of spike/compose.participant.yml. `spec` is passed through
+# The containers of participant/compose.participant.yml. `spec` is passed through
 # verbatim; in `env`, {origin} and {user} are substituted per participant;
 # `secretEnv` maps a variable to a key of <release>-credentials (<user>-<key>).
-# Every container but the Lab binds 127.0.0.1 (spike/compose.participant.yml);
+# Every container but the Lab binds 127.0.0.1 (participant/compose.participant.yml);
 # probes on them must be exec, not httpGet/tcpSocket (those dial the pod IP).
-# Resources: measured in the spike (spike/README.md "Sizing"). Keep the memory
+# Resources: measured in the spike (participant/README.md "Sizing"). Keep the memory
 # values until a multi-hour soak; titiler was still growing between runs.
 x-pg: &pg {PGHOST: localhost, PGPORT: "5432", PGUSER: eoapi, PGDATABASE: postgis}
 x-pg-secret: &pgsecret {PGPASSWORD: db}

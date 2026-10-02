@@ -1,6 +1,6 @@
 # cert-manager is cluster platform, so Terraform owns it (like ingress-nginx);
 # `terraform destroy` owns its removal. Nothing in this repo creates an issuer
-# or certificate: spike/chart takes a pre-issued secret (`ingress.tlsSecret`).
+# or certificate: participant/chart takes a pre-issued secret (`ingress.tlsSecret`).
 
 resource "helm_release" "cert_manager" {
   count = var.enable_cert_manager ? 1 : 0

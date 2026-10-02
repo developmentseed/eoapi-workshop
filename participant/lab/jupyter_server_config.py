@@ -1,6 +1,6 @@
 """Lab = the participant's front door: login + same-origin proxy to every service.
 
-Needs LAB_PASSWORD and LAB_TOKEN in the environment (spike/.env locally, a
+Needs LAB_PASSWORD and LAB_TOKEN in the environment (participant/.env locally, a
 Secret in the chart). Services listen on localhost inside the shared network
 namespace (the pod); jupyter-server-proxy exposes each one at /<name>/.
 """

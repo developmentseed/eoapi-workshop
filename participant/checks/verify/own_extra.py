@@ -16,14 +16,14 @@ import sys
 
 import httpx
 
-NODE = "http://eoapi-spike-control-plane"
+NODE = "http://eoapi-participant-control-plane"
 
-CID = "spike-verify-persist"
+CID = "verify-persist"
 
 
 def client(u):
     return httpx.Client(
-        base_url=NODE, timeout=60, headers={"Host": f"lab-{u}.spike.local:18080"}
+        base_url=NODE, timeout=60, headers={"Host": f"lab-{u}.participant.local:18080"}
     )
 
 
@@ -74,7 +74,7 @@ elif phase == "write":
     r = c.post(
         "/oidc/",
         data={
-            "username": "spike-verify",
+            "username": "verify",
             "scopes": "openid stac:read stac:write",
             "claims": json.dumps({"email": "v@example.com"}),
         },

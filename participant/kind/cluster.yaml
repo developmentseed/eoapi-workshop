@@ -1,6 +1,6 @@
 # Local stand-in for "labs": one node, ingress-nginx on host port 18080.
-#   kind create cluster --name eoapi-spike --config spike/kind/cluster.yaml \
-#     --kubeconfig spike/.kind-kubeconfig
+#   kind create cluster --name eoapi-participant --config participant/kind/cluster.yaml \
+#     --kubeconfig participant/.kind-kubeconfig
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:

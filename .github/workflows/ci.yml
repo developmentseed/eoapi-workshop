@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
       - name: Lint
-        run: helm lint spike/chart
+        run: helm lint participant/chart
       - name: Render
         # prepull=true renders the one template the defaults skip
-        run: helm template spike spike/chart --set prepull=true > /dev/null
+        run: helm template participants participant/chart --set prepull=true > /dev/null

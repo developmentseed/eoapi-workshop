@@ -2,7 +2,7 @@
 
 Runs in a throwaway container on the `kind` docker network (run.sh). Every
 request goes to the node's port 80 (published on the host as 127.0.0.1:18080)
-with `Host: lab-uNN.spike.local:18080`, the exact Host a browser sends.
+with `Host: lab-uNN.participant.local:18080`, the exact Host a browser sends.
 Credentials come from the environment (U01_PASSWORD, U01_TOKEN, ...) and are
 never printed. Prints: PASS|FAIL <name> — <detail>
 """
@@ -14,7 +14,7 @@ import re
 
 import httpx
 
-NODE = "http://eoapi-spike-control-plane"
+NODE = "http://eoapi-participant-control-plane"
 USERS = ["u01", "u02"]
 GLAD = "glad-global-forest-change-1.11"
 GLAD_ITEM = "hansen-gfc-2023-v1.11-80N-180W"
@@ -40,12 +40,12 @@ def check(name):
 
 
 def origin(u):
-    return f"http://lab-{u}.spike.local:18080"
+    return f"http://lab-{u}.participant.local:18080"
 
 
 def client(u):
     return httpx.Client(
-        base_url=NODE, timeout=60, headers={"Host": f"lab-{u}.spike.local:18080"}
+        base_url=NODE, timeout=60, headers={"Host": f"lab-{u}.participant.local:18080"}
     )
 
 
@@ -66,9 +66,9 @@ def mint(c):
     r = c.post(
         "/oidc/",
         data={
-            "username": "spike-frontdoor",
+            "username": "kind-check",
             "scopes": "openid stac:read stac:write",
-            "claims": json.dumps({"email": "spike@example.com"}),
+            "claims": json.dumps({"email": "check@example.com"}),
         },
     )
     r.raise_for_status()
@@ -174,7 +174,7 @@ for u in USERS:
 
     @check(f"{u}.stac.bearer-write")
     def _():
-        cid = f"spike-frontdoor-{u}"
+        cid = f"kind-check-{u}"
         col = {
             "type": "Collection",
             "stac_version": "1.0.0",
@@ -204,8 +204,8 @@ def _():
     # ingress-nginx's default proxy-body-size (1m) would 413 this; values.yaml sets 64m.
     c, h = client("u01"), {"Authorization": f"token {secret('u01', 'TOKEN')}"}
     body = {"type": "file", "format": "text", "content": "x" * 2_000_000}
-    put = c.put("/api/contents/spike-upload.txt", json=body, headers=h)
-    dele = c.delete("/api/contents/spike-upload.txt", headers=h)
+    put = c.put("/api/contents/upload-test.txt", json=body, headers=h)
+    dele = c.delete("/api/contents/upload-test.txt", headers=h)
     return put.status_code in (
         200,
         201,
@@ -243,7 +243,7 @@ def _():
     col = {
         "type": "Collection",
         "stac_version": "1.0.0",
-        "id": "spike-frontdoor-cross",
+        "id": "kind-check-cross",
         "description": "must be refused",
         "license": "proprietary",
         "links": [],
@@ -259,7 +259,7 @@ def _():
     )
     if r.status_code in (200, 201):
         S["u02"].delete(
-            "/stac/collections/spike-frontdoor-cross",
+            "/stac/collections/kind-check-cross",
             headers={"Authorization": f"Bearer {mint(S['u02'])}"},
         )
     return (

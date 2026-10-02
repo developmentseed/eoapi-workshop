@@ -2,7 +2,7 @@
 # lets Terraform read the IP OVH assigns to the LB and drive the Route53 record
 # from it — all in one `terraform apply`.
 #
-# spike/chart's Ingress uses this `nginx` class, and its NetworkPolicy admits
+# participant/chart's Ingress uses this `nginx` class, and its NetworkPolicy admits
 # only this `ingress-nginx` namespace.
 
 resource "helm_release" "ingress_nginx" {

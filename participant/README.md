@@ -66,15 +66,15 @@ Not yet verified: 20 stacks at once, a node failure, and browser logins in Safar
 
 ## Start
 
-Run these from `spike/`:
+Run these from `participant/`:
 
 ```sh
 # 1. Lab base image from the repo's Dockerfile.local (once; slow the first time)
-docker build -f ../Dockerfile.local -t eoapi-spike-lab-base ..
+docker build -f ../Dockerfile.local -t eoapi-participant-lab-base ..
 # 2. Secrets (once): random Postgres password, Lab password and Lab token
 ./gen-env.sh
 # 3. Build the Lab + DB images and start (about 10 s once the images exist)
-docker compose -p eoapi-spike -f compose.participant.yml up -d --build --wait
+docker compose -p eoapi-participant -f compose.participant.yml up -d --build --wait
 ```
 
 Open http://localhost:18888 and log in with the password, or with `?token=<LAB_TOKEN>` (see below).
@@ -100,7 +100,7 @@ curl -c jar "$LAB/api/status?token=$TOKEN" && curl -b jar "$LAB/stac/search?limi
 
 ## Where the password is
 
-`spike/.env` holds the secrets. It is gitignored and written by `gen-env.sh` with mode 600.
+`participant/.env` holds the secrets. It is gitignored and written by `gen-env.sh` with mode 600.
 
 - `LAB_PASSWORD`: for the login form.
 - `LAB_TOKEN`: for `?token=` or scripts. The login form accepts it too.
@@ -113,13 +113,13 @@ grep LAB_PASSWORD .env
 ## Stop
 
 ```sh
-docker compose -p eoapi-spike -f compose.participant.yml down -v   # -v: drop the DB; the next up reloads the baked data
+docker compose -p eoapi-participant -f compose.participant.yml down -v   # -v: drop the DB; the next up reloads the baked data
 ```
 
 The DB lives in the pgstac image's anonymous volume. `up --force-recreate` alone keeps it: add `--renew-anon-volumes` (`-V`) to start from the baked data again.
 
 ```sh
-docker compose -p eoapi-spike -f compose.participant.yml up -d --wait --force-recreate -V
+docker compose -p eoapi-participant -f compose.participant.yml up -d --wait --force-recreate -V
 ```
 
 ## On Kubernetes (local kind)
@@ -133,22 +133,22 @@ docker compose -p eoapi-spike -f compose.participant.yml up -d --wait --force-re
 
 ```sh
 export KUBECONFIG=$PWD/.kind-kubeconfig
-kind create cluster --name eoapi-spike --config kind/cluster.yaml --kubeconfig $KUBECONFIG
-kubectl --context kind-eoapi-spike apply -f \
+kind create cluster --name eoapi-participant --config kind/cluster.yaml --kubeconfig $KUBECONFIG
+kubectl --context kind-eoapi-participant apply -f \
   https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/kind/deploy.yaml
 # Public images, per platform (an arm64 Mac here): `kind load` fails on multi-platform
 # indexes with Docker's containerd store. stac-browser and stac-manager are amd64 only.
 docker save --platform linux/arm64 ghcr.io/stac-utils/stac-fastapi-pgstac:7.0.0 ghcr.io/stac-utils/titiler-pgstac:3.2.0 \
   ghcr.io/developmentseed/tipg:1.6.1 ghcr.io/developmentseed/stac-auth-proxy:v1.2.0 \
-  | docker exec -i eoapi-spike-control-plane ctr -n k8s.io images import --platform linux/arm64 --digests -
+  | docker exec -i eoapi-participant-control-plane ctr -n k8s.io images import --platform linux/arm64 --digests -
 docker save --platform linux/amd64 ghcr.io/radiantearth/stac-browser:5.1.0 ghcr.io/developmentseed/stac-manager:1.0.3 \
-  | docker exec -i eoapi-spike-control-plane ctr -n k8s.io images import --platform linux/amd64 --digests -
+  | docker exec -i eoapi-participant-control-plane ctr -n k8s.io images import --platform linux/amd64 --digests -
 # The Lab and DB built by compose (rebuild the Lab whenever docs/ changes: it bakes the notebooks in)
-for i in lab db; do docker tag eoapi-spike-$i ghcr.io/developmentseed/eoapi-workshop-$i:local; done
-kind load docker-image --name eoapi-spike ghcr.io/developmentseed/eoapi-workshop-{lab,db}:local
-kubectl --context kind-eoapi-spike create namespace spike-own
-RELEASE=spike ./deploy.sh kind-eoapi-spike spike-own up local u01 u02
-checks/frontdoor-own/run.sh && checks/verify/own.sh   # browser: http://lab-u01.spike.local:18080 (/etc/hosts)
+for i in lab db; do docker tag eoapi-participant-$i ghcr.io/developmentseed/eoapi-workshop-$i:local; done
+kind load docker-image --name eoapi-participant ghcr.io/developmentseed/eoapi-workshop-{lab,db}:local
+kubectl --context kind-eoapi-participant create namespace participants
+./deploy.sh kind-eoapi-participant participants up local u01 u02
+checks/frontdoor-own/run.sh && checks/verify/own.sh   # browser: http://lab-u01.participant.local:18080 (/etc/hosts)
 ```
 
 `deploy.sh` is the only way in for a real cluster: it takes the context, namespace, image tag and the whole participant list every time, refuses to drop participants without `REMOVE=1`, prints the credentials as CSV (`creds`), and `down` uninstalls the release and its volumes but never the namespace.
@@ -194,7 +194,7 @@ Measured in the spike on one participant's pod (local Docker, adjusted for Kuber
 ## Files
 
 - `compose.participant.yml`: the stack. Images and tags come from PR #35's `docker-compose.yml`.
-- `lab/`: `FROM eoapi-spike-lab-base` plus jupyter-server-proxy 4.6.0 and `jupyter_server_config.py`, which sets the login, the proxy routes and kernel culling.
+- `lab/`: `FROM eoapi-participant-lab-base` plus jupyter-server-proxy 4.6.0 and `jupyter_server_config.py`, which sets the login, the proxy routes and kernel culling.
 - `db/`: pgstac v0.9.11 with the ecoregions table and the glad collection (100 items) baked in as init SQL. A container start needs no network.
 - `stac-browser/default.conf.template`: the image's nginx template, listening on `127.0.0.1` only.
 - `chart/`: the participant chart (`values-labs.yaml`: the labs cluster); `deploy.sh`: install, credentials and teardown for it;

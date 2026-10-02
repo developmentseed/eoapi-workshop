@@ -1,4 +1,4 @@
-{{- /* Per participant: one pod running spike/compose.participant.yml (every
+{{- /* Per participant: one pod running participant/compose.participant.yml (every
 container shares localhost), a Service for the Lab port only, and two volumes. */ -}}
 {{- range $u := .Values.participants }}
 {{- $sel := dict "app.kubernetes.io/instance" $.Release.Name "participant" $u }}

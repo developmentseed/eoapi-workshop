@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Deploy the participant stacks (spike/chart), print their credentials, or tear
+# Deploy the participant stacks (participant/chart), print their credentials, or tear
 # them down. The kube context and the namespace are always explicit.
 #
-#   spike/deploy.sh CONTEXT NAMESPACE up TAG u01 u02 ...   # exactly these participants
-#   spike/deploy.sh CONTEXT NAMESPACE creds > slips.csv   # participant,url,password,token
-#   CONFIRM=NAMESPACE spike/deploy.sh CONTEXT NAMESPACE down
+#   participant/deploy.sh CONTEXT NAMESPACE up TAG u01 u02 ...   # exactly these participants
+#   participant/deploy.sh CONTEXT NAMESPACE creds > slips.csv   # participant,url,password,token
+#   CONFIRM=NAMESPACE participant/deploy.sh CONTEXT NAMESPACE down
 #
 #   TAG          the image tag the publish workflow pushed (sha-<commit>), or
 #                `local` for images loaded into kind

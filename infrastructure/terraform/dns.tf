@@ -1,5 +1,5 @@
 # Wildcard A record: *.eoapi-workshop.ds.io -> ingress load balancer floating IP.
-# spike/chart serves each participant's stack at its own subdomain under this
+# participant/chart serves each participant's stack at its own subdomain under this
 # wildcard (lab-u01., lab-u02., ...), so a single wildcard record covers all of
 # them.
 

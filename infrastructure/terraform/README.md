@@ -1,7 +1,7 @@
 # Terraform — OVH Managed Kubernetes + Route53 DNS
 
 Provisions the infrastructure the per-participant stacks
-([`spike/`](../../spike/README.md)) run on:
+([`participant/`](../../participant/README.md)) run on:
 
 - A **3-node `b3-16` OVH Managed Kubernetes** cluster (fixed-size `workers`
   pool), plus an optional `workshop` pool for the event itself (see
@@ -11,13 +11,13 @@ Provisions the infrastructure the per-participant stacks
 - **ingress-nginx** (installed via Helm), whose OVH-provisioned load balancer is
   the cluster's public entry point.
 - **cert-manager** (installed via Helm; toggle with `enable_cert_manager`), for
-  Let's Encrypt TLS. Terraform creates no issuer: `spike/chart` renders a namespaced
-  Issuer and Certificate when `tls.acmeServer` is set (`spike/chart/values-labs.yaml`).
+  Let's Encrypt TLS. Terraform creates no issuer: `participant/chart` renders a namespaced
+  Issuer and Certificate when `tls.acmeServer` is set (`participant/chart/values-labs.yaml`).
 - A **wildcard `A` record** `*.eoapi-workshop.ds.io` in **AWS Route53** pointing
   at that load balancer's IP.
 
 Terraform owns the cluster **platform** (ingress-nginx, cert-manager);
-`spike/deploy.sh` owns the participant release and never touches the
+`participant/deploy.sh` owns the participant release and never touches the
 controllers. `terraform destroy` removes them.
 
 Each participant's stack is served at its own subdomain under the wildcard
@@ -43,7 +43,7 @@ period, the apply errors on the DNS record — just re-run `terraform apply` and
 the data source re-reads the now-assigned IP. The IP is chosen by OVH at
 LB-creation time and changes if ingress-nginx is destroyed and recreated.
 
-`spike/chart` routes through this install: its Ingress uses the `nginx` class,
+`participant/chart` routes through this install: its Ingress uses the `nginx` class,
 and its NetworkPolicy admits only the `ingress-nginx` namespace.
 
 ## Prerequisites
@@ -69,7 +69,7 @@ terraform apply
 ```
 
 Then grab the kubeconfig and deploy the participant stacks with
-`spike/deploy.sh` (see [`spike/README.md`](../../spike/README.md)):
+`participant/deploy.sh` (see [`participant/README.md`](../../participant/README.md)):
 
 ```bash
 terraform output -raw kubeconfig > kubeconfig.yaml
@@ -102,10 +102,10 @@ S3-compatible), then run `terraform init -migrate-state`.
 
 Extra nodes for the event itself, added before and removed after. Nodes are
 labelled `nodepool=workshop`; set `nodeSelector: { nodepool: workshop }` in
-`spike/chart`'s values to put the participant pods on them.
+`participant/chart`'s values to put the participant pods on them.
 
 Each participant pod requests 2.75 GiB, so a `b3-16` holds 4 and a `b3-32` 8–10
-([`spike/README.md` "Sizing"](../../spike/README.md#sizing)). Keep one spare
+([`participant/README.md` "Sizing"](../../participant/README.md#sizing)). Keep one spare
 node: 20 participants need 6× `b3-16`, or 3–4× `b3-32`.
 
 - **Cluster created by this stack:** set `workshop_node_count = 6` in
@@ -124,6 +124,6 @@ node: 20 participants need 6× `b3-16`, or 3–4× `b3-32`.
 Each node pulls about 3.4 GiB of images: add the pool the day before and deploy
 with `prepull: true` so they are cached when participants arrive.
 
-Tear the release down (`CONFIRM=NAMESPACE spike/deploy.sh CONTEXT NAMESPACE down`)
+Tear the release down (`CONFIRM=NAMESPACE participant/deploy.sh CONTEXT NAMESPACE down`)
 before removing the pool, or the participant pods sit `Pending` with nowhere to
 run.
