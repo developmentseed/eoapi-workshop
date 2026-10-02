@@ -1,5 +1,5 @@
 server {
-    # loopback only: other pods must not reach it (evidence/auth.md). The image's own
+    # loopback only: other pods must not reach it. The image's own
     # template, with only this listen line changed.
     listen 127.0.0.1:8080;
     server_name  localhost;

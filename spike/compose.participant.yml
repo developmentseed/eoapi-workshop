@@ -9,7 +9,7 @@
 #   docker compose -p eoapi-spike -f compose.participant.yml up -d --build --wait
 #
 # Every service but the Lab binds 127.0.0.1: another pod (or container) cannot
-# reach it around the Lab login (evidence/auth.md). On k8s keep the NetworkPolicy too.
+# reach it around the Lab login. On k8s keep the NetworkPolicy too.
 #
 # Port plan inside the shared netns:
 #   lab 18888 · stac-fastapi 8081 · titiler 8082 · tipg 8083 · stac-auth-proxy 8084
@@ -84,8 +84,8 @@ services:
       ENABLE_TRANSACTIONS_EXTENSIONS: "1"
       FORWARDED_ALLOW_IPS: "*"
     # --root-path /stac: Starlette's trailing-slash redirect (stac-manager POSTs
-    # /collections/) and the queryables $id keep the /stac prefix
-    # (evidence/browser-apps.md F1). Requests without the prefix still route.
+    # /collections/) and the queryables $id keep the /stac prefix.
+    # Requests without the prefix still route.
     command: uvicorn stac_fastapi.pgstac.app:create_app --factory --host 127.0.0.1 --port 8081 --workers 1 --root-path /stac
     depends_on:
       database: { condition: service_healthy }
@@ -216,7 +216,7 @@ services:
       APP_DESCRIPTION: Manage STAC collections and items in your eoAPI workshop stack
     # The image's default port 8080 is stac-browser's in this shared netns.
     # stac-manager 1.0.3 hard-codes its OIDC scope without stac:write, so every
-    # save got 403 (evidence/browser-apps.md F2): add it to the built bundle.
+    # save got 403: add it to the built bundle.
     # Runs after the image's entrypoint, which rewrites the bundle from env.
     command:
       - sh

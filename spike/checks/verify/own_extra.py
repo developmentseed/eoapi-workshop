@@ -96,9 +96,9 @@ elif phase == "write":
             "temporal": {"interval": [[None, None]]},
         },
     }
-    p = c.post(
-        "/stac/collections", json=col, headers={"Authorization": f"Bearer {tok}"}
-    )
+    auth = {"Authorization": f"Bearer {tok}"}
+    c.delete(f"/stac/collections/{CID}", headers=auth)  # a previous run's copy persists
+    p = c.post("/stac/collections", json=col, headers=auth)
     g = c.get(f"/stac/collections/{CID}")
     w = c.put(
         "/api/contents/work/verify-work.txt",

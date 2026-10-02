@@ -24,7 +24,7 @@ c.PasswordIdentityProvider.allow_password_change = False
 c.IdentityProvider.token = os.environ["LAB_TOKEN"]
 # Explicit SameSite (Safari has no Lax default; Lax still sends the cookie on the
 # OIDC redirect back to /browser/auth), and a login that ends with the workshop
-# instead of tornado's 30 days (evidence/auth.md).
+# instead of tornado's 30 days.
 c.IdentityProvider.cookie_options = {"samesite": "Lax", "expires_days": 2}
 
 # An OOM kills the whole Lab container (cgroup v2): reap idle kernels.

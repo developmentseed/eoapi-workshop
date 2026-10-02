@@ -1,7 +1,7 @@
 """The chart runs the same stack as compose.participant.yml: per container,
 same image, same command line, same env names, same non-secret env values.
 
-values.yaml repeats compose by hand (evidence/frontdoor-own.md), so this is
+values.yaml repeats compose by hand, so this is
 what keeps the two from drifting. Reads `helm template` on stdin, renders
 participant u01 back to compose's origin, and never prints a value that comes
 from a secret. Prints: PASS|FAIL <name> — <detail>

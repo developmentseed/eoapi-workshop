@@ -1,6 +1,8 @@
-# Spike: one participant's eoAPI stack in a "pod"
+# One eoAPI stack per participant
 
-One participant's full eoAPI stack, run locally with docker compose and laid out like a Kubernetes pod.
+One participant's full eoAPI stack, run locally with docker compose and laid out like a Kubernetes pod; `chart/` runs one such pod per participant.
+
+This started as a spike. Its investigation (every topic's checks, the write-ups and the screenshots) is on branch [`spike/per-user-stacks-evidence`](https://github.com/lhoupert/eoapi-workshop/tree/spike/per-user-stacks-evidence/spike), commit d50c0ce.
 
 - The Lab container owns the network namespace, and every other service joins it (`network_mode: service:lab`), so they share `localhost`.
 - Only the Lab is published, on `127.0.0.1:18888`.
@@ -36,7 +38,7 @@ Every service but the Lab binds `127.0.0.1`: nothing else in the pod is reachabl
 
 ## From a laptop tool: token once, then the cookie
 
-Jupyter's login parameter `?token=` has the same name as STAC's pagination cursor. On `/stac/search` or `/stac/collections/{id}/items` it gives HTTP 500, writes the Lab token to stac-fastapi's log, and is echoed into `next`/`self` links and tile URLs (`evidence/auth.md`, `evidence/apis.md`). So send it once, on a URL that is not a STAC page, and let the cookie do the rest:
+Jupyter's login parameter `?token=` has the same name as STAC's pagination cursor. On `/stac/search` or `/stac/collections/{id}/items` it gives HTTP 500, writes the Lab token to stac-fastapi's log, and is echoed into `next`/`self` links and tile URLs. So send it once, on a URL that is not a STAC page, and let the cookie do the rest:
 
 ```python
 from pystac_client import Client
@@ -63,12 +65,6 @@ curl -c jar "$LAB/api/status?token=$TOKEN" && curl -b jar "$LAB/stac/search?limi
 grep LAB_PASSWORD .env
 ```
 
-## Check
-
-```sh
-checks/build/run.sh      # one PASS|FAIL|BLOCKED line per check
-```
-
 ## Stop
 
 ```sh
@@ -83,7 +79,7 @@ docker compose -p eoapi-spike -f compose.participant.yml up -d --wait --force-re
 
 ## On Kubernetes (local kind)
 
-`chart/` runs the same stack as one pod per participant, behind one Ingress (`lab-uNN.<domain>`). Steps, checks and findings are in `evidence/frontdoor-own.md` and `evidence/hardening.md`.
+`chart/` runs the same stack as one pod per participant, behind one Ingress (`lab-uNN.<domain>`).
 
 - Each participant's DB and `/home/jovyan/work` are on PVCs: they survive pod replacement and are deleted with the participant or the release.
 - The NetworkPolicy closes every port but the Lab's to the ingress controller. Out of the pod, only DNS and 80/443 on public addresses are allowed (`egressExcept` closes more).
@@ -91,15 +87,42 @@ docker compose -p eoapi-spike -f compose.participant.yml up -d --wait --force-re
 - `nodeSelector`/`tolerations` pin the pods to the workshop node pool; `prepull: true` adds a DaemonSet that pulls every image onto each of its nodes.
 
 ```sh
-kind create cluster --name eoapi-spike --config kind/cluster.yaml --kubeconfig .kind-kubeconfig
-# then ingress-nginx and the public images as in evidence/frontdoor-own.md, and:
+export KUBECONFIG=$PWD/.kind-kubeconfig
+kind create cluster --name eoapi-spike --config kind/cluster.yaml --kubeconfig $KUBECONFIG
+kubectl --context kind-eoapi-spike apply -f \
+  https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/kind/deploy.yaml
+# Public images, per platform (an arm64 Mac here): `kind load` fails on multi-platform
+# indexes with Docker's containerd store. stac-browser and stac-manager are amd64 only.
+docker save --platform linux/arm64 ghcr.io/stac-utils/stac-fastapi-pgstac:7.0.0 ghcr.io/stac-utils/titiler-pgstac:3.2.0 \
+  ghcr.io/developmentseed/tipg:1.6.1 ghcr.io/developmentseed/stac-auth-proxy:v1.2.0 \
+  | docker exec -i eoapi-spike-control-plane ctr -n k8s.io images import --platform linux/arm64 --digests -
+docker save --platform linux/amd64 ghcr.io/radiantearth/stac-browser:5.1.0 ghcr.io/developmentseed/stac-manager:1.0.3 \
+  | docker exec -i eoapi-spike-control-plane ctr -n k8s.io images import --platform linux/amd64 --digests -
+# The Lab and DB built by compose (rebuild the Lab whenever docs/ changes: it bakes the notebooks in)
 for i in lab db; do docker tag eoapi-spike-$i ghcr.io/developmentseed/eoapi-workshop-$i:local; done
 kind load docker-image --name eoapi-spike ghcr.io/developmentseed/eoapi-workshop-{lab,db}:local
-KUBECONFIG=.kind-kubeconfig RELEASE=spike ./deploy.sh kind-eoapi-spike spike-own up local u01 u02
-checks/frontdoor-own/run.sh && checks/verify/own.sh
+kubectl --context kind-eoapi-spike create namespace spike-own
+RELEASE=spike ./deploy.sh kind-eoapi-spike spike-own up local u01 u02
+checks/frontdoor-own/run.sh && checks/verify/own.sh   # browser: http://lab-u01.spike.local:18080 (/etc/hosts)
 ```
 
 `deploy.sh` is the only way in for a real cluster: it takes the context, namespace, image tag and the whole participant list every time, refuses to drop participants without `REMOVE=1`, prints the credentials as CSV (`creds`), and `down` uninstalls the release and its volumes but never the namespace.
+
+## Sizing
+
+Measured in the spike on one participant's pod (local Docker, adjusted for Kubernetes):
+
+| State | Memory per pod |
+|---|---|
+| Fresh | 0.64 GiB |
+| Warm | 1.0–1.4 GiB |
+| Busiest: tiles, STAC searches and a 478 MiB raster in a kernel | 2.7–3.0 GiB |
+
+- The chart requests 580m CPU and 2.75 GiB per pod (limits: 6.1 GiB). Memory limits packing, not CPU: a pod averages 0.25–0.5 cores under load, and Postgres peaks around 1.2 cores during vector tiles.
+- A 3 GiB Lab holds one big-raster kernel, not two.
+- Pods per node: 1 on an 8 GB node, 4 on 16 GB, 8–10 on 32 GB (the last two extrapolated). Keep one spare node: losing a node stops every stack on it.
+- Each node pulls about 3.4 GiB of images; `prepull: true` does it ahead of time.
+- The world-view glad tile takes about 112 s cold and 0.4 s warm: warm each stack after deploying.
 
 ## Files
 
@@ -107,7 +130,5 @@ checks/frontdoor-own/run.sh && checks/verify/own.sh
 - `lab/`: `FROM eoapi-spike-lab-base` plus jupyter-server-proxy 4.6.0 and `jupyter_server_config.py`, which sets the login, the proxy routes and kernel culling.
 - `db/`: pgstac v0.9.11 with the ecoregions table and the glad collection (100 items) baked in as init SQL. A container start needs no network.
 - `stac-browser/default.conf.template`: the image's nginx template, listening on `127.0.0.1` only.
-- `checks/<topic>/run.sh`: one PASS|FAIL|BLOCKED line per check, per topic (build, apis, auth, browser-apps, notebooks, footprint, frontdoor-own).
-- `evidence/<topic>.md`: what was run, results and findings; `evidence/fix.md`: the fixes applied after the testers and the re-run of every topic.
 - `chart/`: the participant chart; `deploy.sh`: install, credentials and teardown for it.
-- `evidence/hardening.md`: persistence, egress, pinned images and `deploy.sh`, with their check runs.
+- `checks/frontdoor-own/run.sh`, `checks/verify/own.sh`: the chart's tests on kind (isolation, egress, persistence, upgrades, credentials), one PASS|FAIL|BLOCKED line per check.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Own-chart front door on the local kind cluster (spike/chart, release `spike`,
-# namespace spike-own). Prereq: see spike/evidence/frontdoor-own.md "Reproduce".
+# namespace spike-own). Prereq: spike/README.md "On Kubernetes (local kind)".
 # Prints one line per check: PASS|FAIL|BLOCKED <name> — <detail>. Always exits 0.
 # Never prints a password, token or JWT.
 #
