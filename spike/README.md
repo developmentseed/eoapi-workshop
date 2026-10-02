@@ -19,6 +19,51 @@ This started as a spike. Its investigation (every topic's checks, the write-ups 
 | http://localhost:18888/manager/ | STAC Manager | 8086 |
 | — | pgstac (Postgres) | 5432 |
 
+## Design and trade-offs
+
+What this design chose, what each choice costs, and what to do about it on the day.
+
+- **One pod per participant, all services inside.**
+  - Per participant this is 1 Deployment, 1 Service and 2 volumes, and it starts in about a minute.
+  - The alternatives: the upstream eoapi-k8s chart once per participant means ~12 pods, a Postgres-operator cluster and hook Jobs, with a 6–12 min cold start. A single shared stack makes participants collide in one catalog.
+  - *Cost:* it breaks the usual one-service-per-pod habit, and the service configuration lives in `chart/values.yaml` instead of coming from eoapi-k8s (the images are the same versions).
+- **The Lab is the only way in.**
+  - Every service binds `127.0.0.1` and is reached through the Lab's proxy at `/stac`, `/raster` and so on. One password (or a link with a token) per participant gates the whole stack.
+  - An open Jupyter on a public host is a shell on the cluster, and new hostnames appear in Certificate Transparency logs within minutes.
+  - *Cost:* Jupyter's `?token=` clashes with STAC's pagination `token` (see "From a laptop tool"). To write or to see private items, STAC Browser and STAC Manager use a second login, through the mock OIDC provider at `/oidc/`.
+- **Small database pools to save memory.**
+  - stac-fastapi has **one** connection (`DB_MAX_CONN_SIZE: "1"`); titiler-pgstac and tipg have 10 each.
+  - *Effect, seen on the cluster:* one very large STAC request (`limit=5000` on a collection of about 1,100 items) held that connection. That participant's other STAC requests answered 500 for about a minute, until it finished.
+  - Only their own stack is affected. Keep page sizes small in the notebooks; raising the pool costs memory in every pod.
+- **Sized by memory.**
+  - Each pod requests 2.75 GiB and 580m CPU; the Lab is capped at 3 GiB, which holds one big-raster kernel, not two.
+  - See "Sizing" for nodes per participant count, and keep one spare node: losing a node stops every stack on it.
+- **Participant data survives pod replacement; the provided notebooks do not.**
+  - The database and `/home/jovyan/work` are on volumes.
+  - The notebooks are baked into the Lab image, so a fix during the event means a new image tag and `deploy.sh up`. Every stack then restarts: data is kept, kernels and open sessions are lost.
+  - **Freeze the release during the event:** any change to the pod template restarts every participant at once (strategy `Recreate`).
+- **Removing a participant deletes their stack, data and credentials.**
+  - `deploy.sh up` refuses unless `REMOVE=1`, and re-adding someone gives them a new password.
+  - `deploy.sh down` deletes every volume but never the namespace.
+- **Cold tiles.** The first world-view glad tile takes about 100 s per stack (titiler reads 100 COG headers from S3); after that it takes about 1 s. Run `warm.sh` after every deploy or restart.
+- **Network isolation.**
+  - The NetworkPolicy admits only the ingress controller, and only on the Lab port. Out of the pod, only DNS and TCP 80/443 to public addresses are allowed.
+  - A participant cannot reach other stacks, the API server, nodes or other namespaces.
+  - *Cost:* no other outbound ports from the Lab (no `git` over SSH, FTP and so on).
+- **One TLS certificate for a fixed list of hosts with spares** (`tls.names`), not the participant list, so adding someone never triggers a new ACME order.
+  - Issue it days ahead: Let's Encrypt's rate limits are shared across the whole domain. Use staging for rehearsals.
+- **The images are built for amd64 by CI and pinned by commit tag** (`sha-<commit>`, never `latest`). `prepull: true` pulls the ~3.4 GiB per node ahead of time.
+
+Verified on the OVH cluster "labs" (Calico) on 2026-10-02, with three participants:
+- TLS and a `Secure` login cookie;
+- kernel websockets through ingress-nginx;
+- egress blocked as above, shown against a control pod outside the policy;
+- isolation between participants;
+- the database and `work/` surviving a pod restart on Cinder volumes;
+- notebooks 00–08 with no errored cells.
+
+Not yet verified: 20 stacks at once, a node failure, and browser logins in Safari and Firefox.
+
 ## Start
 
 Run these from `spike/`:
