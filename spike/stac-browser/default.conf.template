@@ -1,0 +1,19 @@
+server {
+    # loopback only: other pods must not reach it (evidence/auth.md). The image's own
+    # template, with only this listen line changed.
+    listen 127.0.0.1:8080;
+    server_name  localhost;
+    absolute_redirect off;
+
+    ${STAC_PREFIX_REDIRECT}
+    location ${STAC_PATH_PREFIX} {
+        alias  /usr/share/nginx/html/;
+        index  index.html;
+        try_files $uri $uri/ ${STAC_PATH_PREFIX}index.html;
+    }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}

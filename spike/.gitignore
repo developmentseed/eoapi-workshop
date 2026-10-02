@@ -1,0 +1,5 @@
+.env
+.kind-kubeconfig
+evidence/.*.log
+# the root .gitignore drops every build/ dir (Python packaging); keep the checks
+!checks/build/
