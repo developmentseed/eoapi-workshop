@@ -83,13 +83,23 @@ docker compose -p eoapi-spike -f compose.participant.yml up -d --wait --force-re
 
 ## On Kubernetes (local kind)
 
-`chart/` runs the same stack as one pod per participant, behind one Ingress (`lab-uNN.<domain>`). Steps, checks and findings are in `evidence/frontdoor-own.md`.
+`chart/` runs the same stack as one pod per participant, behind one Ingress (`lab-uNN.<domain>`). Steps, checks and findings are in `evidence/frontdoor-own.md` and `evidence/hardening.md`.
+
+- Each participant's DB and `/home/jovyan/work` are on PVCs: they survive pod replacement and are deleted with the participant or the release.
+- The NetworkPolicy closes every port but the Lab's to the ingress controller. Out of the pod, only DNS and 80/443 on public addresses are allowed (`egressExcept` closes more).
+- The Lab and DB images come from `<registry>/eoapi-workshop-{lab,db}:<image.tag>`. CI (`.github/workflows/publish-participant-images.yml`) pushes them for amd64 as `sha-<commit>`. On kind, tag the local builds `:local` and load them.
+- `nodeSelector`/`tolerations` pin the pods to the workshop node pool; `prepull: true` adds a DaemonSet that pulls every image onto each of its nodes.
 
 ```sh
 kind create cluster --name eoapi-spike --config kind/cluster.yaml --kubeconfig .kind-kubeconfig
-# then: ingress-nginx, image import and `helm install` as in evidence/frontdoor-own.md
-checks/frontdoor-own/run.sh
+# then ingress-nginx and the public images as in evidence/frontdoor-own.md, and:
+for i in lab db; do docker tag eoapi-spike-$i ghcr.io/developmentseed/eoapi-workshop-$i:local; done
+kind load docker-image --name eoapi-spike ghcr.io/developmentseed/eoapi-workshop-{lab,db}:local
+KUBECONFIG=.kind-kubeconfig RELEASE=spike ./deploy.sh kind-eoapi-spike spike-own up local u01 u02
+checks/frontdoor-own/run.sh && checks/verify/own.sh
 ```
+
+`deploy.sh` is the only way in for a real cluster: it takes the context, namespace, image tag and the whole participant list every time, refuses to drop participants without `REMOVE=1`, prints the credentials as CSV (`creds`), and `down` uninstalls the release and its volumes but never the namespace.
 
 ## Files
 
@@ -99,3 +109,5 @@ checks/frontdoor-own/run.sh
 - `stac-browser/default.conf.template`: the image's nginx template, listening on `127.0.0.1` only.
 - `checks/<topic>/run.sh`: one PASS|FAIL|BLOCKED line per check, per topic (build, apis, auth, browser-apps, notebooks, footprint, frontdoor-own).
 - `evidence/<topic>.md`: what was run, results and findings; `evidence/fix.md`: the fixes applied after the testers and the re-run of every topic.
+- `chart/`: the participant chart; `deploy.sh`: install, credentials and teardown for it.
+- `evidence/hardening.md`: persistence, egress, pinned images and `deploy.sh`, with their check runs.
