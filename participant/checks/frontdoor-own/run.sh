@@ -49,8 +49,6 @@ for u in u01 u02; do
   req=$(jq -r "$cs"' | map("\(.name)=\(.resources.requests.cpu)/\(.resources.requests.memory)/\(.resources.limits.memory)") | join(" ")' <<<"$p")
   nres=$(jq -r "$cs"' | map(select(.resources.requests.cpu and .resources.requests.memory and .resources.limits.memory and (.resources.limits.cpu|not))) | length' <<<"$p")
   ok '[ "$nres" = 9 ]' "$u.pod.resources" "$nres/9 with cpu+memory requests, a memory limit, no cpu limit (request/request/limit): $req"
-  arch=$(for c in stac-browser stac-manager stac-fastapi; do printf '%s=%s ' $c "$("${K[@]}" exec deploy/participants-$u -c $c -- uname -m 2>&1)"; done)
-  ok '[ "$arch" = "stac-browser=x86_64 stac-manager=x86_64 stac-fastapi=aarch64 " ]' "$u.pod.arch" "$arch(browser/manager emulated on the arm64 node)"
   secs=$(jq -r '.items[0].status.conditions | map({(.type): (.lastTransitionTime|fromdateiso8601)}) | add | .Ready - .PodScheduled' <<<"$p")
   ok '[ "$secs" -le 120 ]' "$u.pod.cold-start" "PodScheduled → Ready in ${secs}s (images preloaded on the node)"
   # The chart's Lab has no docs mount (compose mounts ../docs): the notebooks

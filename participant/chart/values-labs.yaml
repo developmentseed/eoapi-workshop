@@ -17,6 +17,3 @@ tls:
 # nodeSelector: {nodepool: workshop}
 # tolerations: [{key: workshop, operator: Exists, effect: NoSchedule}]  # only if the pool is tainted
 # prepull: true
-
-# If the rehearsal finds the API server's endpoint on a public address:
-# egressExcept: [<address>/32]
