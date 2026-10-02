@@ -1,0 +1,22 @@
+# The OVH cluster "labs", namespace eoapi-workshop:
+#   VALUES=spike/chart/values-labs.yaml spike/deploy.sh <context> eoapi-workshop up sha-<commit> u01 u02 u03
+# *.eoapi-workshop.ds.io resolves to the cluster's ingress-nginx.
+host: lab-%s.eoapi-workshop.ds.io
+origin: https://lab-%s.eoapi-workshop.ds.io
+
+ingress:
+  tlsSecret: participants-labs-tls  # cert-manager keeps it after `deploy.sh down` by default: a redeploy reuses it
+
+tls:
+  # Rehearsal: staging. For the event: production, and every name with spares
+  # (e.g. u01..u25), applied days ahead (rate limits are shared across ds.io).
+  acmeServer: https://acme-staging-v02.api.letsencrypt.org/directory
+  names: [u01, u02, u03]
+
+# Once the workshop pool exists (its label and taint are chosen when it is created):
+# nodeSelector: {pool: workshop}
+# tolerations: [{key: workshop, operator: Exists, effect: NoSchedule}]
+# prepull: true
+
+# If the rehearsal finds the API server's endpoint on a public address:
+# egressExcept: [<address>/32]

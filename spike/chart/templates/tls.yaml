@@ -1,0 +1,28 @@
+{{- /* Optional: a namespaced cert-manager Issuer (no cluster-wide ClusterIssuer
+needed) and one Certificate for the Lab hosts of tls.names. That list is fixed,
+with spares, and is not .participants: changing it is a new ACME order, and one
+failing name fails the whole certificate. */ -}}
+{{- with .Values.tls.acmeServer }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ $.Release.Name }}-acme
+spec:
+  acme:
+    server: {{ . }}
+    privateKeySecretRef: {name: {{ $.Release.Name }}-acme-account}
+    solvers:
+      - http01: {ingress: {ingressClassName: {{ $.Values.ingress.className }}}}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $.Release.Name }}-labs
+spec:
+  secretName: {{ required "tls.acmeServer needs ingress.tlsSecret" $.Values.ingress.tlsSecret }}
+  issuerRef: {name: {{ $.Release.Name }}-acme, kind: Issuer}
+  dnsNames:
+    {{- range $.Values.tls.names }}
+    - {{ printf $.Values.host . }}
+    {{- end }}
+{{- end }}

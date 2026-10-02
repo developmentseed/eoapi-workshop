@@ -108,6 +108,28 @@ checks/frontdoor-own/run.sh && checks/verify/own.sh   # browser: http://lab-u01.
 
 `deploy.sh` is the only way in for a real cluster: it takes the context, namespace, image tag and the whole participant list every time, refuses to drop participants without `REMOVE=1`, prints the credentials as CSV (`creds`), and `down` uninstalls the release and its volumes but never the namespace.
 
+## On a real cluster
+
+The cluster provides ingress-nginx, cert-manager and a default StorageClass. The images must be in GHCR, and for more than a few participants the workshop node pool must exist (see Sizing). `chart/values-labs.yaml` holds the settings for the OVH cluster "labs": hosts, TLS through a namespaced Let's Encrypt issuer (staging for rehearsals), and the pool settings commented out until the pool exists.
+
+```sh
+C=<kube context>; NS=eoapi-workshop
+VALUES=chart/values-labs.yaml ./deploy.sh $C $NS up sha-<commit> u01 u02 u03
+./warm.sh $C $NS                       # the first world-view tile per stack, ~2 min cold
+./deploy.sh $C $NS creds > slips.csv   # one URL + password per participant
+```
+
+Rehearse before the event: 2–3 participants, staging certificates, and nothing else in the namespace touched. Check what kind cannot prove:
+
+- [ ] The Certificate is Ready and `https://lab-u01.<domain>` serves it. After login, the Lab's cookie is `Secure`.
+- [ ] Every pod is 9/9, the PVCs are Bound, and a Lab terminal can write to `work/` (`fsGroup` on the cloud volume).
+- [ ] After `kubectl rollout restart` of one participant, their collection and their `work/` file are still there.
+- [ ] Egress, which depends on the cluster's policy engine: from a Lab terminal, `kubernetes.default.svc:443`, another namespace's Service and a node IP time out, while DNS, Earth Search and S3 answer. If the API server's endpoint is a public address, add it to `egressExcept`.
+- [ ] u02's Lab cannot reach u01's pod IP.
+- [ ] A notebook kernel starts and runs (websockets through ingress-nginx), and notebooks 00–08 run end to end for one participant.
+- [ ] The STAC Browser and STAC Manager logins work in Safari and Firefox.
+- [ ] `warm.sh` timings, then `CONFIRM=$NS ./deploy.sh $C $NS down` leaves the namespace and its other releases alone.
+
 ## Sizing
 
 Measured in the spike on one participant's pod (local Docker, adjusted for Kubernetes):
@@ -130,5 +152,6 @@ Measured in the spike on one participant's pod (local Docker, adjusted for Kuber
 - `lab/`: `FROM eoapi-spike-lab-base` plus jupyter-server-proxy 4.6.0 and `jupyter_server_config.py`, which sets the login, the proxy routes and kernel culling.
 - `db/`: pgstac v0.9.11 with the ecoregions table and the glad collection (100 items) baked in as init SQL. A container start needs no network.
 - `stac-browser/default.conf.template`: the image's nginx template, listening on `127.0.0.1` only.
-- `chart/`: the participant chart; `deploy.sh`: install, credentials and teardown for it.
+- `chart/`: the participant chart (`values-labs.yaml`: the labs cluster); `deploy.sh`: install, credentials and teardown for it;
+  `warm.sh`: the first world-view tile of every stack.
 - `checks/frontdoor-own/run.sh`, `checks/verify/own.sh`: the chart's tests on kind (isolation, egress, persistence, upgrades, credentials), one PASS|FAIL|BLOCKED line per check.

@@ -33,6 +33,15 @@ prepull: false
 # public address that must stay closed, e.g. the API server as a /32.
 egressExcept: []
 
+# TLS through cert-manager (installed cluster-wide): set acmeServer to render a
+# namespaced Issuer and one Certificate into ingress.tlsSecret, for the hosts of
+# `names`, a fixed list with spares (templates/tls.yaml). Let's Encrypt:
+#   staging (untrusted, for rehearsals): https://acme-staging-v02.api.letsencrypt.org/directory
+#   production: https://acme-v02.api.letsencrypt.org/directory
+tls:
+  acmeServer: ""
+  names: []
+
 ingress:
   className: nginx
   controllerNamespace: ingress-nginx  # the only peer the NetworkPolicy admits
