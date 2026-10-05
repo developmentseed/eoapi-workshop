@@ -194,6 +194,8 @@ containers:
     env:
       SB_pathPrefix: /browser/
       SB_catalogUrl: "{origin}/stac/"
+      # draw items' preview COGs (no-data transparent) on collection pages, not JPEG thumbnails
+      SB_displayOverviewsForChildren: "true"
       SB_authConfig: >-
         {"type":"openIdConnect",
         "openIdConnectUrl":"{origin}/oidc/.well-known/openid-configuration",

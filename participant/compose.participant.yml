@@ -192,6 +192,8 @@ services:
     environment:
       SB_pathPrefix: /browser/
       SB_catalogUrl: http://localhost:18888/stac/
+      # draw items' preview COGs (no-data transparent) on collection pages, not JPEG thumbnails
+      SB_displayOverviewsForChildren: "true"
       # Chapter 8 login against this stack's mock-oidc. The redirect URI is
       # <origin><pathPrefix>auth = http://localhost:18888/browser/auth.
       SB_authConfig: >-

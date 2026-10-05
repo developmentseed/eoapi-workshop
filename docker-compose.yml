@@ -195,6 +195,8 @@ services:
       - 8080:8080
     environment:
       SB_catalogUrl: "http://localhost:8084"
+      # draw items' preview COGs (no-data transparent) on collection pages, not JPEG thumbnails
+      SB_displayOverviewsForChildren: "true"
       # # Chapter 8: log in against the mock OIDC server. `historyMode` must be
       # # "history" for OIDC (it is STAC Browser's default), and the redirect URI is
       # # always <browser origin>/auth -- here http://localhost:8080/auth.
