@@ -1,8 +1,11 @@
 {{- /* Optional: a namespaced cert-manager Issuer (no cluster-wide ClusterIssuer
-needed) and one Certificate for the Lab hosts of tls.names. That list is fixed,
-with spares, and is not .participants: changing it is a new ACME order, and one
-failing name fails the whole certificate. */ -}}
+needed) and one Certificate for the Lab hosts u01..u<tls.count>. That count is
+fixed, with spares, and is not .participants: changing it is a new ACME order,
+and one failing name fails the whole certificate. */ -}}
 {{- with .Values.tls.acmeServer }}
+{{- if gt (int $.Values.participants) (int $.Values.tls.count) }}
+{{- fail (printf "participants (%d) > tls.count (%d): the extra Labs would have no certificate" (int $.Values.participants) (int $.Values.tls.count)) }}
+{{- end }}
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
@@ -22,7 +25,7 @@ spec:
   secretName: {{ required "tls.acmeServer needs ingress.tlsSecret" $.Values.ingress.tlsSecret }}
   issuerRef: {name: {{ $.Release.Name }}-acme, kind: Issuer}
   dnsNames:
-    {{- range $.Values.tls.names }}
+    {{- range include "eoapi.ids" $.Values.tls.count | fromJsonArray }}
     - {{ printf $.Values.host . }}
     {{- end }}
 {{- end }}

@@ -9,7 +9,7 @@ metadata:
 # <user>-db is baked into that participant's DB volume at its first start:
 # rotating it also needs their <release>-<user>-db PVC deleted (data lost).
 data:
-  {{- range $u := .Values.participants }}
+  {{- range $u := include "eoapi.ids" .Values.participants | fromJsonArray }}
   {{- range $key, $len := dict "password" 12 "token" 48 "db" 32 }}
   {{- $k := printf "%s-%s" $u $key }}
   {{ $k }}: {{ index $old $k | default (randAlphaNum $len | b64enc) }}
@@ -25,7 +25,7 @@ data:
   stac-browser.conf.template: {{ .Files.Get "files/stac-browser.conf.template" | quote }}
 ---
 {{- $hosts := list }}
-{{- range .Values.participants }}{{ $hosts = append $hosts (printf $.Values.host .) }}{{ end }}
+{{- range include "eoapi.ids" .Values.participants | fromJsonArray }}{{ $hosts = append $hosts (printf $.Values.host .) }}{{ end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -37,7 +37,7 @@ spec:
   tls: [{secretName: {{ . }}, hosts: {{ toJson $hosts }}}]
   {{- end }}
   rules:
-    {{- range $u := .Values.participants }}
+    {{- range $u := include "eoapi.ids" .Values.participants | fromJsonArray }}
     - host: {{ printf $.Values.host $u }}
       http:
         paths:

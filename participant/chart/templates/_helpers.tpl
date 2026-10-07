@@ -4,6 +4,13 @@
 {{- index . 1 | replace "{registry}" $v.registry | replace "{tag}" $v.tag -}}
 {{- end -}}
 
+{{- /* (int N): the participant ids u01..uNN, as JSON (fromJsonArray it). */ -}}
+{{- define "eoapi.ids" -}}
+{{- $ids := list -}}
+{{- range until (int .) }}{{ $ids = append $ids (printf "u%02d" (add1 .)) }}{{ end -}}
+{{- toJson $ids -}}
+{{- end -}}
+
 {{- /* nodeSelector + tolerations of the workshop node pool, if set. */ -}}
 {{- define "eoapi.pool" -}}
 {{- with .Values.nodeSelector }}

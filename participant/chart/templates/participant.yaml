@@ -1,6 +1,6 @@
 {{- /* Per participant: one pod running participant/compose.participant.yml (every
 container shares localhost), a Service for the Lab port only, and two volumes. */ -}}
-{{- range $u := .Values.participants }}
+{{- range $u := include "eoapi.ids" .Values.participants | fromJsonArray }}
 {{- $sel := dict "app.kubernetes.io/instance" $.Release.Name "participant" $u }}
 {{- $origin := printf $.Values.origin $u }}
 {{- range $vol := list "db" "work" }}

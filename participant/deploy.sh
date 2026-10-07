@@ -2,7 +2,7 @@
 # Deploy the participant stacks (participant/chart), print their credentials, or tear
 # them down. The kube context and the namespace are always explicit.
 #
-#   participant/deploy.sh CONTEXT NAMESPACE up TAG u01 u02 ...   # exactly these participants
+#   participant/deploy.sh CONTEXT NAMESPACE up TAG N             # participants u01..uNN
 #   participant/deploy.sh CONTEXT NAMESPACE creds > slips.csv   # participant,url,password,token
 #   CONFIRM=NAMESPACE participant/deploy.sh CONTEXT NAMESPACE down
 #
@@ -10,10 +10,10 @@
 #                `local` for images loaded into kind
 #   VALUES=f     extra values: host, origin, ingress.tlsSecret, nodeSelector, ...
 #   RELEASE=r    default: participants
-#   REMOVE=1     let `up` drop participants deployed now (deletes their stack,
-#                data and credentials; re-adding them gives new ones)
+#   REMOVE=1     let `up` lower N (deletes the highest ids' stack, data and
+#                credentials; re-adding them gives new ones)
 #
-# `up` passes the whole list with --reset-values: a bare `helm upgrade` silently
+# `up` passes N with --reset-values: a bare `helm upgrade` silently
 # reuses the previous --set. `down` uninstalls the release, which owns the
 # volumes; it never deletes the namespace.
 set -euo pipefail
@@ -27,18 +27,17 @@ echo "target: context $CTX, namespace $NS, release $REL" >&2
 
 case $CMD in
 up)
-  [ $# -ge 2 ] || usage
-  TAG=$1
-  shift
+  [ $# = 2 ] && [[ $2 =~ ^[0-9]+$ ]] || usage
+  TAG=$1 N=$((10#$2))
   [ "$TAG" != latest ] || { echo "pin the sha- tag, not latest" >&2; exit 2; }
-  now=$("${H[@]}" get values "$REL" --all -o json 2>/dev/null | jq -r '.participants[]' || true)
-  gone=$(comm -23 <(sort <<<"$now") <(printf '%s\n' "$@" | sort) | xargs)
-  if [ -n "$gone" ] && [ "${REMOVE:-}" != 1 ]; then
-    echo "this would delete the stack, data and credentials of: $gone (set REMOVE=1)" >&2
+  # a release from before the count stored a list: u01..u03 = 3
+  now=$("${H[@]}" get values "$REL" --all -o json 2>/dev/null | jq '.participants | if type == "array" then length else . end' || echo 0)
+  if [ "$N" -lt "$now" ] && [ "${REMOVE:-}" != 1 ]; then
+    echo "this would delete the stack, data and credentials of u$(printf %02d $((N + 1)))..u$(printf %02d "$now") (set REMOVE=1)" >&2
     exit 1
   fi
   "${H[@]}" upgrade --install "$REL" "$(dirname "$0")/chart" --reset-values ${VALUES:+-f "$VALUES"} \
-    --set image.tag="$TAG" --set-json "participants=$(printf '%s\n' "$@" | jq -Rnc '[inputs]')" \
+    --set image.tag="$TAG" --set participants="$N" \
     --wait --timeout 20m
   ;;
 creds)

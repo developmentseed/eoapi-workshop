@@ -46,7 +46,7 @@ The investigation behind this design (checks, write-ups, screenshots) is on bran
   - The NetworkPolicy admits only the ingress controller, and only on the Lab port. Out of the pod, only DNS and TCP 80/443 to public addresses are allowed.
   - A participant cannot reach other stacks, the API server, nodes or other namespaces.
   - *Cost:* no other outbound ports from the Lab (no `git` over SSH, FTP and so on).
-- **One TLS certificate for a fixed list of hosts with spares** (`tls.names`), not the participant list, so adding someone never triggers a new ACME order.
+- **One TLS certificate for a fixed count of hosts with spares** (`tls.count`), not `participants`, so adding someone never triggers a new ACME order.
   - Issue it days ahead: Let's Encrypt's rate limits are shared across the whole domain. Use staging for rehearsals.
 - **The images are built for amd64 by CI and pinned by commit tag** (`sha-<commit>`, never `latest`). `prepull: true` pulls the ~3.4 GiB per node ahead of time.
 
@@ -136,19 +136,19 @@ docker save --platform linux/amd64 ghcr.io/radiantearth/stac-browser:5.1.0 ghcr.
 for i in lab db; do docker tag eoapi-participant-$i ghcr.io/developmentseed/eoapi-workshop-$i:local; done
 kind load docker-image --name eoapi-participant ghcr.io/developmentseed/eoapi-workshop-{lab,db}:local
 kubectl --context kind-eoapi-participant create namespace participants
-./deploy.sh kind-eoapi-participant participants up local u01 u02
+./deploy.sh kind-eoapi-participant participants up local 2
 checks/frontdoor-own/run.sh && checks/verify/own.sh   # browser: http://lab-u01.participant.local:18080 (/etc/hosts)
 ```
 
-On a real cluster, always go through `deploy.sh` (usage in its header): it takes the context, namespace, image tag and the whole participant list every time.
+On a real cluster, always go through `deploy.sh` (usage in its header): it takes the context, namespace, image tag and the participant count every time.
 
 ## On a real cluster
 
-The cluster provides ingress-nginx, cert-manager and a default StorageClass. The images must be in GHCR, and for more than a few participants the workshop node pool must exist (see Sizing). `chart/values-labs.yaml` holds the settings for the OVH cluster "labs": hosts, TLS through a namespaced Let's Encrypt issuer (staging for rehearsals), and the pool settings commented out until the pool exists.
+The cluster provides ingress-nginx, cert-manager and a default StorageClass. The images must be in GHCR, and for more than a few participants the workshop node pool must exist (see Sizing). `chart/values-labs.yaml` holds the settings for the OVH cluster "labs": hosts, TLS through a namespaced Let's Encrypt issuer (production, 25 names; staging for rehearsals), and the pool settings commented out until the pool exists.
 
 ```sh
 C=<kube context>; NS=eoapi-workshop
-VALUES=chart/values-labs.yaml ./deploy.sh $C $NS up sha-<commit> u01 u02 u03
+VALUES=chart/values-labs.yaml ./deploy.sh $C $NS up sha-<commit> 3
 ./warm.sh $C $NS                       # the first world-view tile per stack, ~2 min cold
 ./deploy.sh $C $NS creds > slips.csv   # one URL + password per participant
 ```

@@ -1,5 +1,6 @@
-# One stack per id. Adding or removing an id restarts nobody else's pod.
-participants: [u01, u02]
+# N stacks, ids u01..uNN. Raising it restarts nobody else's pod; lowering it
+# deletes the highest ids' stacks, data and credentials.
+participants: 2
 
 # printf patterns, %s = participant id. `origin` is what the browser sees
 # (scheme://host[:port]); kind publishes the ingress on 127.0.0.1:18080.
@@ -34,13 +35,18 @@ prepull: false
 egressExcept: []
 
 # TLS through cert-manager (installed cluster-wide): set acmeServer to render a
-# namespaced Issuer and one Certificate into ingress.tlsSecret, for the hosts of
-# `names`, a fixed list with spares (templates/tls.yaml). Let's Encrypt:
+# namespaced Issuer and one Certificate into ingress.tlsSecret, for the hosts
+# u01..u<count> (templates/tls.yaml). Let's Encrypt:
 #   staging (untrusted, for rehearsals): https://acme-staging-v02.api.letsencrypt.org/directory
 #   production: https://acme-v02.api.letsencrypt.org/directory
 tls:
   acmeServer: ""
-  names: []
+  # A second count, not `participants`, on purpose: start fewer stacks and add
+  # more on the day without touching the certificate. Every change to the
+  # names is a new ACME order (a few minutes of reissue, 5 per week for one
+  # set of names, 50 per week across all of ds.io). Set it once, with spares,
+  # >= participants.
+  count: 0
 
 ingress:
   className: nginx
