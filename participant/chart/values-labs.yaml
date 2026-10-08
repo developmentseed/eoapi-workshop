@@ -14,7 +14,8 @@ tls:
   acmeServer: https://acme-v02.api.letsencrypt.org/directory
   count: 25
 
-# Once the workshop pool exists (OVH labels its nodes nodepool=<pool name>):
-# nodeSelector: {nodepool: workshop}
-# tolerations: [{key: workshop, operator: Exists, effect: NoSchedule}]  # only if the pool is tainted
-# prepull: true
+# The workshop pool (infrastructure/terraform/workshop-pool, 6x b3-16 for ~20);
+# OVH labels its nodes nodepool=<pool name>. Untainted, so no tolerations.
+# Without the pool, these pods stay Pending.
+nodeSelector: {nodepool: workshop}
+prepull: true
