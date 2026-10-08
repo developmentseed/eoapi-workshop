@@ -1,0 +1,17 @@
+# Shared by Dockerfile.local (jupyterhub) and
+# infrastructure/stac-auth-proxy-runtime/Dockerfile, both of which build from the
+# repository root. Keep `docs/` -- both images copy from it.
+.git
+.github
+.claude
+.venv
+node_modules
+_build
+site
+cdk.out
+.ruff_cache
+.cache
+.pytest_cache
+**/__pycache__
+*.pyc
+*.egg-info

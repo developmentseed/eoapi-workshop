@@ -1,5 +1,14 @@
 {
-  "app": "python3 infrastructure/app.py",
+  "_app_comment": [
+    "-O disables jsii's __debug__-gated type-checking stubs. eoapi-cdk >=10.4.0",
+    "generates stubs referencing aws-cdk-lib types (IKeyRef, IRoleRef) that no",
+    "published aws-cdk-lib provides -- 2.267.0 is the latest and has neither -- so",
+    "importing it raises AttributeError at synth. The stubs are dev-time checks",
+    "only; the jsii runtime is unaffected. Drop -O once upstream regenerates its",
+    "Python bindings (see eoapi-cdk#218).",
+    "NOTE: -O also strips `assert` statements from infrastructure/app.py."
+  ],
+  "app": "python3 -O infrastructure/app.py",
   "watch": {
     "include": [
       "**"

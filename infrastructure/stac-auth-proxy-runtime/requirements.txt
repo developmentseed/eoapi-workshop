@@ -1,0 +1,8 @@
+# Pinned exactly to the versions in eoapi-cdk 11.6.4's stac-auth-proxy uv.lock.
+# Exact pins on purpose: this stack has already been broken twice by unpinned
+# transitive deps drifting between image builds, and fastapi/starlette are the
+# pair that broke the proxy.
+mangum==0.21.0
+stac-auth-proxy==1.1.1
+fastapi==0.136.3
+starlette==1.1.0

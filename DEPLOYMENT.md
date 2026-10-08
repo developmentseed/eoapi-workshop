@@ -73,13 +73,14 @@ The easiest way to deploy is using the GitHub Actions workflow, which automatica
    - `HOSTED_ZONE_ID` - **Required** - Route53 hosted zone ID for `eoapi.dev` domain
    - `CERTIFICATE_ARN` - **Required** - ACM certificate ARN for `*.eoapi.dev` wildcard certificate
    - `WORKSHOP_TOKEN` - **Required** - Bearer token for the workshop config Lambda. `config.py` will generate one when this is unset, but the value never reaches you: the deploy's own data-loading step and the **Reset Workshop Data** workflow both authenticate with this variable, so an unset variable means they send an empty token to a Lambda holding a generated one, and a freshly generated token on every deploy
+   - `WORKSHOP_USER_PASSWORD` - Password shared by the Cognito workshop users (optional, auto-generated if not provided — but then it rotates on every deploy)
    - `PGSTAC_VERSION` - pgstac version (optional, defaults to `0.9.8`)
 
 3. **IAM Role Setup**
 
    Your IAM role must:
    - Have a trust relationship allowing GitHub Actions OIDC provider
-   - Have permissions for CDK deployment (CloudFormation, Lambda, RDS, VPC, EC2, Secrets Manager, etc.)
+   - Have permissions for CDK deployment (CloudFormation, Lambda, RDS, VPC, EC2, Secrets Manager, Cognito, etc.)
 
 ### Deploy
 
@@ -175,10 +176,30 @@ All services are accessible via custom domains following the pattern `{service}.
 - **STAC API**: `https://{PROJECT}-stac.eoapi.dev`
 - **Raster API**: `https://{PROJECT}-raster.eoapi.dev`
 - **Vector API**: `https://{PROJECT}-vector.eoapi.dev`
+- **STAC Auth Proxy**: `https://{PROJECT}-protected-stac.eoapi.dev`
 
 For example, with `PROJECT=eoapi-workshop-dev`:
 - Config: `https://config.eoapi-workshop-dev.eoapi.dev`
 - STAC: `https://stac.eoapi-workshop-dev.eoapi.dev`
+
+### Authentication
+
+`https://{PROJECT}-protected-stac.eoapi.dev` is the STAC Auth Proxy, an authenticated front
+door to the STAC API. Reads are public; writes require a token carrying the
+`stac/write` scope.
+
+Tokens come from a Cognito user pool deployed alongside the stack, standing in for
+the `mock-oidc` container in the local compose stack. It is created with two users,
+`alice` and `bob`, sharing one password. Set `workshop_user_password` in
+`config.yaml` to pin it — left unset, it is regenerated on every deploy.
+
+The pool's discovery URL, client ID, hosted UI, and user password are all
+CloudFormation outputs (`OidcDiscoveryUrl`, `OidcClientId`, `OidcAuthority`,
+`WorkshopUserPassword`) and are also returned by the config Lambda.
+
+Note that Cognito joins the resource server and scope with a `/`, so the deployed
+scopes are `stac/read` and `stac/write` — the local `mock-oidc` container issues
+`stac:read` and `stac:write`.
 
 ### For Organizers
 
