@@ -17,13 +17,14 @@ RUN ogr2ogr -f PGDump /data/ecoregions.sql \
       -nlt PROMOTE_TO_MULTI \
  && gzip -9 /data/ecoregions.sql
 
-# --- glad: collection + first 100 items from the MAAP STAC -> pgstac upserts ---
+# --- glad: collection + its tiles over North America and Europe (with the UK)
+# from the MAAP STAC -> pgstac upserts. BBOXES: w,s,e,n per region (152 tiles).
 FROM python:3.12-slim AS glad
 ARG STAC_SOURCE=https://stac.maap-project.org
 ARG COLLECTION=glad-global-forest-change-1.11
-ARG ITEM_LIMIT=100
+ARG BBOXES="-170,10,-50,75 -25,34,45,72"
 COPY glad_to_sql.py /glad_to_sql.py
-RUN python /glad_to_sql.py "$STAC_SOURCE" "$COLLECTION" "$ITEM_LIMIT" > /glad.sql \
+RUN python /glad_to_sql.py "$STAC_SOURCE" "$COLLECTION" $BBOXES > /glad.sql \
  && gzip -9 /glad.sql
 
 FROM ghcr.io/stac-utils/pgstac:${PGSTAC_TAG}

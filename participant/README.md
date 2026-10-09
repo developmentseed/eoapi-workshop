@@ -41,7 +41,7 @@ The investigation behind this design (checks, write-ups, screenshots) is on bran
 - **Removing a participant deletes their stack, data and credentials.**
   - `deploy.sh up` refuses unless `REMOVE=1`, and re-adding someone gives them a new password.
   - `deploy.sh down` deletes every volume but never the namespace.
-- **Cold tiles.** The first world-view glad tile takes about 100 s per stack (titiler reads 100 COG headers from S3); after that it takes about 1 s. Run `warm.sh` after every deploy or restart.
+- **Cold tiles.** The first view of notebook 04's glad map (six z2 tiles over North America and Europe) takes about 50 s per stack, while titiler reads the COGs from S3; after that it takes about 1 s. Run `warm.sh` after every deploy or restart.
 - **Network isolation.**
   - The NetworkPolicy admits only the ingress controller, and only on the Lab port. Out of the pod, only DNS and TCP 80/443 to public addresses are allowed.
   - A participant cannot reach other stacks, the API server, nodes or other namespaces.
@@ -149,7 +149,7 @@ The cluster provides ingress-nginx, cert-manager and a default StorageClass. The
 ```sh
 C=<kube context>; NS=eoapi-workshop
 VALUES=chart/values-labs.yaml ./deploy.sh $C $NS up sha-<commit> 3
-./warm.sh $C $NS                       # the first world-view tile per stack, ~2 min cold
+./warm.sh $C $NS                       # the glad map's first view per stack, ~1 min cold
 ./deploy.sh $C $NS creds > slips.csv   # one URL + password per participant
 ```
 
@@ -182,8 +182,8 @@ Measured on one participant's pod (local Docker, adjusted for Kubernetes):
 
 - `compose.participant.yml`: the stack, with the same images and tags as the root `docker-compose.yml`.
 - `lab/`: `FROM eoapi-participant-lab-base` plus jupyter-server-proxy 4.6.0 and `jupyter_server_config.py`, which sets the login, the proxy routes and kernel culling.
-- `db/`: pgstac v0.9.11 with the ecoregions table and the glad collection (100 items) baked in as init SQL. A container start needs no network.
+- `db/`: pgstac v0.9.11 with the ecoregions table and the glad collection (152 Hansen tiles over North America and Europe) baked in as init SQL. A container start needs no network. Init SQL only runs on an empty volume: existing stacks keep their old data.
 - `stac-browser/default.conf.template`: the image's nginx template, listening on `127.0.0.1` only.
 - `chart/`: the participant chart (`values-labs.yaml`: the labs cluster); `deploy.sh`: install, credentials and teardown for it;
-  `warm.sh`: the first world-view tile of every stack.
+  `warm.sh`: the glad map's first view on every stack.
 - `checks/frontdoor-own/run.sh`, `checks/verify/own.sh`: the chart's tests on kind (isolation, egress, persistence, upgrades, credentials), one PASS|FAIL|BLOCKED line per check.
