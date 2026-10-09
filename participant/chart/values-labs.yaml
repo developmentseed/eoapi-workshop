@@ -1,0 +1,21 @@
+# The OVH cluster "labs", namespace eoapi-workshop:
+#   VALUES=participant/chart/values-labs.yaml participant/deploy.sh <context> eoapi-workshop up sha-<commit> 3
+# *.eoapi-workshop.ds.io resolves to the cluster's ingress-nginx.
+host: lab-%s.eoapi-workshop.ds.io
+origin: https://lab-%s.eoapi-workshop.ds.io
+
+ingress:
+  tlsSecret: participants-labs-tls  # cert-manager keeps it after `deploy.sh down` by default: a redeploy reuses it
+
+tls:
+  # Production, applied days ahead (rate limits are shared across ds.io);
+  # staging (acme-staging-v02) for rehearsals. count: lab-u01..u25, the event
+  # size with spares, so `up` can add stacks without a new certificate.
+  acmeServer: https://acme-v02.api.letsencrypt.org/directory
+  count: 25
+
+# The workshop pool (infrastructure/terraform/workshop-pool, 6x b3-16 for ~20);
+# OVH labels its nodes nodepool=<pool name>. Untainted, so no tolerations.
+# Without the pool, these pods stay Pending.
+nodeSelector: {nodepool: workshop}
+prepull: true

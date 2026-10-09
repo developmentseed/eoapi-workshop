@@ -26,3 +26,15 @@ jobs:
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
       - name: Build and check links
         run: uv run --with jupyter-book jupyter book build --html --check-links --strict
+
+  helm:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - name: Lint
+        run: helm lint participant/chart
+      - name: Render
+        # values-labs.yaml and prepull=true render the templates the defaults skip (tls, prepull)
+        run: helm template participants participant/chart -f participant/chart/values-labs.yaml --set prepull=true > /dev/null

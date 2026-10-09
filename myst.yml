@@ -22,6 +22,9 @@ project:
     - file: docs/03-stac_fastapi_pgstac.ipynb
     - file: docs/04-titiler_pgstac.ipynb
     - file: docs/05-tipg.ipynb
+    - file: docs/06-stac_transactions_auth.ipynb
+    - file: docs/07-row_level_auth.ipynb
+    - file: docs/08-stac_browser_auth.ipynb
 site:
   template: book-theme
   options:
