@@ -174,7 +174,7 @@ Measured on one participant's pod (local Docker, adjusted for Kubernetes):
 | Warm | 1.0–1.4 GiB |
 | Busiest: tiles, STAC searches and a 478 MiB raster in a kernel | 2.7–3.0 GiB |
 
-- The chart requests 580m CPU and 2.75 GiB per pod (limits: 6.1 GiB). Memory limits packing, not CPU: a pod averages 0.25–0.5 cores under load, and Postgres peaks around 1.2 cores during vector tiles.
+- The chart requests 580m CPU and 2.75 GiB per pod (limits: 6.75 GiB). Memory limits packing, not CPU: a pod averages 0.25–0.5 cores under load, and Postgres peaks around 1.2 cores during vector tiles.
 - A 3 GiB Lab holds one big-raster kernel, not two.
 - Pods per node: 1 on an 8 GB node, 4 on 16 GB, 8–10 on 32 GB (the last two extrapolated).
 
